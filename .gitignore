@@ -1,0 +1,19 @@
+# Output of audit runs (when pipeline is copied into a real project)
+audit/
+reports/
+findings.json
+findings.jsonl
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
