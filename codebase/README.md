@@ -289,4 +289,4 @@ codebase/
 
 ## Автор
 
-Кирилл Вечкасов · [vechkasov.pro](https://vechkasov.pro)
+**Кирилл Вечкасов** — [Telegram-канал](https://t.me/vechkasov_pro) · [vechkasov.pro](https://vechkasov.pro)
