@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://t.me/vechkasov_pro">📣 Telegram-канал автора</a> ·
+  <a href="https://t.me/pomogay_marketing">📣 Telegram-канал автора</a> ·
   <a href="https://vechkasov.pro">🌐 vechkasov.pro</a>
 </p>
 
@@ -175,6 +175,6 @@ MIT. Бери, форкай, адаптируй под себя — добавл
 
 **Кирилл Вечкасов** — AI Development Agency
 
-Подписывайся на [Telegram-канал](https://t.me/vechkasov_pro) — там пишу про AI-разработку, агентов и пайплайны.
+Подписывайся на [Telegram-канал](https://t.me/pomogay_marketing) — там пишу про AI-разработку, агентов и пайплайны.
 
 Если нужна помощь с прогоном аудита на твоём проекте или хочешь адаптировать пайплайн под специфические требования — пиши, обсудим.
