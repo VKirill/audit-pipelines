@@ -1,22 +1,37 @@
-<p align="center">
-  <img src="image/avatar-round.png" alt="Кирилл Вечкасов" width="160" height="160" />
-</p>
+<div align="center">
+  <img src="image/avatar-round.png" alt="Кирилл Вечкасов" width="140" height="140" />
 
-<h1 align="center">Audit Pipelines</h1>
+  <h1>Audit Pipelines</h1>
 
-<p align="center">
-  <b>Два готовых пайплайна для глубокого аудита кода.</b><br/>
-  Запускаются одной командой в Claude Code — на выходе понятный план улучшений.
-</p>
+  <p>
+    <b>Глубокий аудит кода за один прогон Claude Code.</b><br/>
+    На выходе — приоритизированный roadmap улучшений с пруфами из кода.
+  </p>
 
-<p align="center">
-  <a href="https://t.me/pomogay_marketing">📣 Telegram-канал автора</a> ·
-  <a href="https://vechkasov.pro">🌐 vechkasov.pro</a>
-</p>
+  <p>
+    <a href="https://t.me/pomogay_marketing">
+      <img src="https://img.shields.io/badge/Telegram-помогаю_маркетингу-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram"/>
+    </a>
+    <a href="https://vechkasov.pro">
+      <img src="https://img.shields.io/badge/website-vechkasov.pro-2b2b2b?style=for-the-badge" alt="Website"/>
+    </a>
+    <a href="LICENSE">
+      <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License"/>
+    </a>
+  </p>
 
----
+  <p>
+    <img src="https://img.shields.io/badge/Claude_Code-required-D97757?logo=anthropic&logoColor=white" alt="Claude Code"/>
+    <img src="https://img.shields.io/badge/Serena-MCP-9b59b6" alt="Serena MCP"/>
+    <img src="https://img.shields.io/badge/GitNexus-MCP-2c3e50" alt="GitNexus MCP"/>
+    <img src="https://img.shields.io/badge/method-evidence--based-blue" alt="Evidence-based"/>
+    <img src="https://img.shields.io/badge/mode-read--only-success" alt="Read-only"/>
+  </p>
+</div>
 
-Если ты владелец продукта, тимлид, инвестор или просто человек у которого есть кодовая база и нет ответа на вопрос «а что там вообще происходит и куда это всё катится» — это для тебя.
+<br/>
+
+> Если ты владелец продукта, тимлид, инвестор или просто человек, у которого есть кодовая база и нет ответа на вопрос «а что там вообще происходит и куда это всё катится» — это для тебя.
 
 ---
 
@@ -26,155 +41,259 @@
 
 В коде то же самое. Симптомы знакомые:
 
-- разработчики говорят «здесь страшно трогать»
-- простая фича делается две недели вместо двух дней
-- сайт тормозит, а почему — никто толком не объяснит
-- зависимости не обновлялись со времён динозавров и в них уже есть известные дыры
-- тесты есть, но никто не уверен, что они что-то реально проверяют
+| Симптом | Что это значит на самом деле |
+|---|---|
+| «Здесь страшно трогать» | Нет тестов, изменения каскадируют непредсказуемо |
+| Простая фича делается две недели вместо двух дней | Архитектурный долг съел скорость команды |
+| Сайт тормозит, никто не знает почему | Нет мониторинга и замеров производительности |
+| Зависимости не обновлялись с динозавров | Известные дыры в безопасности; supply chain-риск |
+| «Тесты есть, но мы не уверены что они работают» | Test smells, низкое покрытие критичных путей |
 
 Чтобы починить — сначала нужно увидеть. Этим и занимается аудит.
 
-**Раньше** для этого нужно было нанимать консультанта на $200/час, который три недели ходил по коду и в конце выдавал PDF на 80 страниц. Сейчас — это делает Claude Code за пару часов и стоит как обед в кафе.
+> **Раньше** для этого нанимали консультанта на $200/час, который три недели ходил по коду и в конце выдавал PDF на 80 страниц.
+> **Сейчас** — это делает Claude Code за пару часов и стоит как обед в кафе.
 
 Эти пайплайны — готовый набор инструкций, который превращает Claude из «умного чатбота» в систематичного аудитора. Он не пропускает фазы, не придумывает находки из воздуха, и в конце выдаёт **roadmap с приоритетами** — что чинить сейчас, что через месяц, а что вообще не трогать.
 
 ---
 
-## Что внутри
+## Два пайплайна — выбери свой
 
-В этом репозитории два пайплайна. Они независимые — выбираешь тот, который подходит твоему проекту.
+<table>
+<tr>
+<td width="50%" valign="top">
 
-### [`frontend/`](./frontend) — аудит фронтенд-сайта
+### 🎨 [`frontend/`](./frontend)
 
-Если у тебя сайт, лендинг или веб-приложение на **React / Next.js** — это сюда. Семь фаз:
+**React / Next.js сайты**
 
-1. **Инвентаризация** — что вообще лежит в проекте
-2. **Архитектура** — как всё устроено, где запутано
-3. **Производительность** — почему тормозит и что с этим делать (Core Web Vitals, замеры)
-4. **Доступность и SEO** — найдут ли тебя в Google и сможет ли пользоваться человек с экранным ридером
-5. **Безопасность** — известные уязвимости в зависимостях, утечки, плохие практики
-6. **DX и тулинг** — насколько комфортно разработчикам, есть ли тесты, CI/CD
-7. **Roadmap** — финальный план: что чинить, в каком порядке, сколько займёт
+7 фаз, ~30-90 минут на средний проект.
 
-Идеально подходит для маркетинговых сайтов, e-commerce, SPA, лендингов на Next.js.
+- Архитектура и тех.долг
+- Performance + Core Web Vitals
+- Accessibility (WCAG 2.2) и SEO
+- Security: CVE, секреты, XSS
+- DX, тулинг, CI/CD
+- Roadmap Now / Next / Later
 
-→ [Подробнее в frontend/README.md](./frontend/README.md)
+**Подходит для:** маркетинговых сайтов, e-commerce, SPA, лендингов на Next.js.
 
-### [`codebase/`](./codebase) — универсальный аудит кода
+[Запустить →](./frontend)
 
-Если у тебя **бэкенд, API, бот, монорепо или что-то нестандартное** — это сюда. Это более глубокий пайплайн (версия v3) с встроенными «детекторами вранья»:
+</td>
+<td width="50%" valign="top">
 
-- 13+ фаз: от инвентаризации до self-audit (агент проверяет сам себя на overconfidence)
-- **Trust Map** — откуда в систему попадают данные и где они становятся опасными
-- **Money & State Invariants** — для проектов с деньгами/балансами/транзакциями
-- **Adversary Review** — финальный артефакт «10 причин не доверять этому аудиту»
-- Скрипты-валидаторы, которые блокируют переход к следующей фазе пока агент не докажет находки конкретными цитатами из кода
-- На выходе — `ROADMAP.md` + машиночитаемый `_meta.json` для CI/дашбордов
+### 🛡️ [`codebase/`](./codebase)
 
-Подходит для любого языка: Python, Go, TypeScript, Java, Rust — работает везде, где есть исходники.
+**Универсальный аудит — любой стек**
 
-→ [Подробнее в codebase/README.md](./codebase/README.md)
+13+ фаз, встроенные «детекторы вранья», ~75-180 минут.
+
+- Trust Map (потоки данных)
+- Money & State Invariants
+- Self-audit + adversary review
+- Hard exit gates через скрипты
+- Машинная сводка `_meta.json` для CI
+- Phase 11 deep-dive при critical
+
+**Подходит для:** бэкенда, API, ботов, монорепо. Python, Go, TypeScript, Java, Rust.
+
+[Запустить →](./codebase)
+
+</td>
+</tr>
+</table>
+
+### Какой пайплайн выбрать?
+
+```mermaid
+flowchart TD
+    A[У тебя проект] --> B{Это React или<br/>Next.js сайт?}
+    B -- Да, чистый фронт --> C[frontend/]
+    B -- Есть бэкенд / API --> D[codebase/]
+    B -- Не уверен --> E{Есть деньги,<br/>транзакции,<br/>auth?}
+    E -- Да --> D
+    E -- Нет --> F{Нужны hard gates<br/>и self-audit?}
+    F -- Да --> D
+    F -- Нет --> C
+
+    style C fill:#fde7c8,stroke:#d97757,color:#000
+    style D fill:#d4e6f1,stroke:#2c3e50,color:#000
+```
 
 ---
 
-## Что я получу на выходе
+## Что получишь на выходе
 
 Главный артефакт обоих пайплайнов — **ROADMAP**. Это не «80 страниц красивых слов», а конкретный список:
 
 ```
-Сейчас (Now):
-  └─ [critical] SQL-инъекция в /api/search — файл api/search.ts:42
+🔴 Сейчас (Now):
+  └─ [critical] SQL-инъекция в /api/search — api/search.ts:42
      → как чинить, сколько займёт, что сломается если не починить
 
-Дальше (Next):
-  └─ [high] N+1 запрос в загрузке профиля — файл lib/user.ts:118
+🟡 Дальше (Next):
+  └─ [high] N+1 запрос в загрузке профиля — lib/user.ts:118
      → меняет ответ с 4 секунд на 200 мс
 
-Потом (Later):
+🟢 Потом (Later):
   └─ [medium] Дублирование логики валидации — 6 мест
      → не критично, но затрудняет добавление новых полей
 ```
 
-У каждой находки:
-- **Severity** — насколько критично (critical / high / medium / low)
-- **Evidence** — точное место в коде (файл:строка) с цитатой
-- **Impact** — что это значит для бизнеса
-- **Fix** — как чинить
-- **Effort** — сколько времени займёт
-- **Confidence** — насколько аудитор уверен в находке (high / medium / low)
+<details>
+<summary><b>Что есть у каждой находки</b></summary>
+
+| Поле | Что это |
+|---|---|
+| `severity` | Насколько критично: `critical` / `high` / `medium` / `low` |
+| `evidence` | Точное место в коде (файл:строка) с цитатой |
+| `impact` | Что это значит для бизнеса |
+| `fix` | Как чинить — конкретные шаги, не «улучшить X» |
+| `effort` | Сколько времени займёт (S/M/L) |
+| `confidence` | Насколько аудитор уверен в находке (`high`/`medium`/`low`) |
+| `references` | Ссылки на документацию / OWASP / книги |
 
 Никаких «возможно», «вероятно», «было бы неплохо». Только факты с пруфами.
+
+</details>
 
 ---
 
 ## Как этим пользоваться (для не-программистов)
 
-Если ты сам не пишешь код — это нормально. Базовый сценарий:
+<table>
+<tr>
+<td width="60px" align="center"><b>1️⃣</b></td>
+<td><b>Дай ссылку на этот репозиторий своему разработчику</b> (или нанятому подрядчику) и попроси прогнать аудит. Это ~2-3 часа его времени.</td>
+</tr>
+<tr>
+<td align="center"><b>2️⃣</b></td>
+<td><b>Получи <code>ROADMAP.md</code></b> — читать его можно прямо в GitHub или в любом текстовом редакторе. На русском, человекочитаемый.</td>
+</tr>
+<tr>
+<td align="center"><b>3️⃣</b></td>
+<td><b>Обсуди приоритеты с командой.</b> Roadmap уже отсортирован по формуле <code>(impact × confidence) / effort</code>, но решение что брать в работу — за тобой.</td>
+</tr>
+<tr>
+<td align="center"><b>4️⃣</b></td>
+<td><b>Раз в квартал — повтори.</b> Сравнишь динамику: что починили, что новое появилось, движется ли проект в правильном направлении.</td>
+</tr>
+</table>
 
-1. **Дай ссылку на репозиторий своему разработчику** (или нанятому подрядчику) и попроси прогнать аудит. Это ~2-3 часа его времени.
-2. **Получи `ROADMAP.md`** — читать его можно прямо в GitHub или в любом текстовом редакторе. Он на русском, человекочитаемый.
-3. **Обсуди приоритеты** с командой. Roadmap уже отсортирован, но решение что брать в работу — за тобой.
-4. **Раз в квартал — повтори.** Сравнишь динамику: что починили, что новое появилось, движется ли проект в правильном направлении.
-
-Если разработчика нет — можно прогнать самостоятельно, нужен только установленный [Claude Code](https://claude.com/claude-code) и ~30 минут на установку зависимостей. Дальше — копипаст команды в чат.
+Если разработчика нет — можно прогнать самостоятельно. Нужен только установленный [Claude Code](https://claude.com/claude-code) и ~30 минут на установку зависимостей. Дальше — копипаст команды в чат.
 
 ---
 
 ## Что нужно установить (один раз)
 
-Оба пайплайна используют:
+<table>
+<tr>
+<td width="33%" valign="top" align="center">
+<h3>Claude Code</h3>
+<a href="https://claude.com/claude-code">claude.com/claude-code</a><br/>
+<i>основной оркестратор</i>
+</td>
+<td width="33%" valign="top" align="center">
+<h3>Serena</h3>
+<a href="https://github.com/oraios/serena">oraios/serena</a><br/>
+<i>семантика кода (LSP)</i>
+</td>
+<td width="33%" valign="top" align="center">
+<h3>GitNexus</h3>
+<a href="https://www.npmjs.com/package/gitnexus">npmjs.com/gitnexus</a><br/>
+<i>граф кода + история</i>
+</td>
+</tr>
+</table>
 
-- **[Claude Code](https://claude.com/claude-code)** — основной инструмент-оркестратор
-- **[Serena](https://github.com/oraios/serena)** — для семантической навигации по коду (LSP)
-- **[GitNexus](https://www.npmjs.com/package/gitnexus)** — для построения графа кода и истории
-
-Подробные команды установки — в README конкретного пайплайна.
+Команды установки — в README конкретного пайплайна.
 
 ---
 
 ## Принципы, которые зашиты в оба пайплайна
 
-- **Read-only** — пайплайн ничего не меняет в коде. Только смотрит и пишет отчёт.
-- **Факты, не мнения** — каждая находка с измерением или цитатой. Никаких «мне кажется».
-- **Hot spots first** — чиним там, где часто ломается (методология Adam Tornhill, *Your Code as a Crime Scene*).
-- **Тесты до рефакторинга** — сначала характеризационные тесты, потом изменения (Michael Feathers, *Working Effectively with Legacy Code*).
-- **Никаких переписываний с нуля** — точечные fix'ы, не «давайте всё перепишем».
-- **Severity по импакту, не по эстетике** — никто не получает critical за «непривычное именование».
+<table>
+<tr><td><b>📂 Read-only</b></td><td>Пайплайн ничего не меняет в коде. Только смотрит и пишет отчёт.</td></tr>
+<tr><td><b>🔬 Факты, не мнения</b></td><td>Каждая находка с измерением или цитатой. Никаких «мне кажется».</td></tr>
+<tr><td><b>🔥 Hot spots first</b></td><td>Чиним там, где часто ломается (методология Adam Tornhill).</td></tr>
+<tr><td><b>🧪 Тесты до рефакторинга</b></td><td>Сначала характеризационные тесты, потом изменения (Michael Feathers).</td></tr>
+<tr><td><b>🎯 Точечные fix'ы</b></td><td>Никаких переписываний с нуля.</td></tr>
+<tr><td><b>⚖️ Severity по импакту</b></td><td>Никто не получает critical за «непривычное именование».</td></tr>
+</table>
 
 ---
 
 ## На какой методике это построено
 
-Не «придумано в гараже». В основе — классика:
+Не «придумано в гараже». В основе — классика индустрии:
 
-- *Clean Architecture* — Robert C. Martin
-- *Refactoring* — Martin Fowler
-- *Working Effectively with Legacy Code* — Michael Feathers
-- *Your Code as a Crime Scene* — Adam Tornhill
-- *A Philosophy of Software Design* — John Ousterhout
-- *Release It!* — Michael Nygard
-- *Designing Data-Intensive Applications* — Martin Kleppmann
-- *Site Reliability Engineering* — Google SRE Book
-- *Accelerate* — Forsgren, Humble, Kim
-- OWASP Top 10, OWASP Cheat Sheets
-- W3C WCAG 2.2, WAI-ARIA
+<table>
+<tr>
+<td valign="top" width="50%">
+
+**Архитектура и тех.долг**
+- Robert C. Martin — *Clean Architecture*
+- Martin Fowler — *Refactoring*
+- Michael Feathers — *Working Effectively with Legacy Code*
+- John Ousterhout — *A Philosophy of Software Design*
+- Adam Tornhill — *Your Code as a Crime Scene*
+
+**Resilience и распределённые системы**
+- Michael Nygard — *Release It!*
+- Martin Kleppmann — *Designing Data-Intensive Applications*
+- Pat Helland — *Life Beyond Distributed Transactions*
+- Google — *SRE Book*
+
+</td>
+<td valign="top" width="50%">
+
+**Performance, A11y, SEO**
+- Ilya Grigorik — *High Performance Browser Networking*
+- Jeremy Wagner — *Web Performance in Action*
+- Heydon Pickering — *Inclusive Components*
+- W3C WCAG 2.2 · WAI-ARIA APG
 - Web.dev (Core Web Vitals)
-- Next.js / React official docs
 
-То, что десятилетиями считается best practice в индустрии — теперь применяется к твоему коду автоматически.
+**Security**
+- OWASP Top 10 + Cheat Sheets
+- Saltzer & Schroeder — *Protection of Information*
+
+**Когнитивные ошибки в анализе**
+- Daniel Kahneman — *Thinking, Fast and Slow*
+- Forsgren / Humble / Kim — *Accelerate*
+
+</td>
+</tr>
+</table>
 
 ---
 
 ## Лицензия
 
-MIT. Бери, форкай, адаптируй под себя — добавляй фазы, меняй пороги, расширяй чек-листы. Это набор markdown-инструкций, не закрытый продукт.
+[MIT](LICENSE). Бери, форкай, адаптируй под себя — добавляй фазы, меняй пороги, расширяй чек-листы. Это набор markdown-инструкций + bash/python скриптов, не закрытый продукт.
 
 ---
 
-## Автор
+<div align="center">
 
-**Кирилл Вечкасов** — AI Development Agency
+### Автор
 
-Подписывайся на [Telegram-канал](https://t.me/pomogay_marketing) — там пишу про AI-разработку, агентов и пайплайны.
+<img src="image/avatar-round.png" alt="Кирилл Вечкасов" width="80" height="80"/>
 
-Если нужна помощь с прогоном аудита на твоём проекте или хочешь адаптировать пайплайн под специфические требования — пиши, обсудим.
+**Кирилл Вечкасов**
+AI Development Agency
+
+<a href="https://t.me/pomogay_marketing">
+  <img src="https://img.shields.io/badge/Telegram-помогаю_маркетингу-26A5E4?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram"/>
+</a>
+<a href="https://vechkasov.pro">
+  <img src="https://img.shields.io/badge/website-vechkasov.pro-2b2b2b?style=for-the-badge" alt="Website"/>
+</a>
+
+<br/>
+
+<i>Если нужна помощь с прогоном аудита на твоём проекте<br/>или хочешь адаптировать пайплайн под специфические требования — пиши, обсудим.</i>
+
+</div>
