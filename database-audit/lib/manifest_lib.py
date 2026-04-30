@@ -46,9 +46,16 @@ def evidence_path(phase, filename):
     return d / filename
 
 
-def next_finding_id(prefix='DB'):
-    """Allocate next sequential ID by reading findings.jsonl."""
+def next_finding_id(category=None, prefix='DB'):
+    """Allocate next sequential ID. Category-aware when category given.
+    Examples: next_finding_id('money') -> DB-MONEY-001
+              next_finding_id() -> DB-0001 (legacy)
+    """
+    from id_gen import next_id
     _, _, _, fp, _ = get_paths()
+    if category:
+        return next_id(category, fp)
+    # Legacy path
     n = 0
     if fp.exists():
         for line in fp.read_text().splitlines():
@@ -58,18 +65,38 @@ def next_finding_id(prefix='DB'):
             try:
                 obj = json.loads(line)
                 fid = obj.get('id', '')
-                if fid.startswith(f'{prefix}-'):
-                    n = max(n, int(fid.split('-')[1]))
+                if fid.startswith(f'{prefix}-') and not fid.startswith(f'{prefix}-DB-'):
+                    parts = fid.split('-')
+                    if len(parts) == 2:
+                        try:
+                            n = max(n, int(parts[1]))
+                        except ValueError:
+                            pass
             except Exception:
                 pass
     return f'{prefix}-{n+1:04d}'
 
 
-def append_finding(finding):
-    """Append finding to findings.jsonl. Auto-fills id if missing."""
+def already_exists(category, location):
+    """Check if a finding with the same (category, file, db_object/symbol) already exists."""
+    from id_gen import fingerprint, existing_fingerprints
     _, _, _, fp, _ = get_paths()
+    fps = existing_fingerprints(fp)
+    return fingerprint(category, location) in fps
+
+
+def append_finding(finding, dedup=True):
+    """Append finding to findings.jsonl. Auto-fills id (category-aware), dedups by default."""
+    from id_gen import next_id, fingerprint, existing_fingerprints
+    _, _, _, fp, _ = get_paths()
+    cat = finding.get('category', 'meta')
+    if dedup:
+        fps = existing_fingerprints(fp)
+        fpr = fingerprint(cat, finding.get('location', {}))
+        if fpr in fps:
+            return None  # skipped duplicate
     if 'id' not in finding:
-        finding['id'] = next_finding_id()
+        finding['id'] = next_id(cat, fp)
     if 'status' not in finding:
         finding['status'] = 'open'
     with fp.open('a', encoding='utf-8') as f:
