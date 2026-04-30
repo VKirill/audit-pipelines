@@ -68,7 +68,7 @@
 
 **React / Next.js сайты**
 
-7 фаз, ~30-90 минут.
+7 фаз: архитектура → roadmap.
 
 - Архитектура и тех.долг
 - Performance + Core Web Vitals
@@ -88,7 +88,7 @@
 
 **Универсальный аудит — любой стек**
 
-13+ фаз, ~75-180 минут.
+13+ фаз с hard exit gates.
 
 - Trust Map (потоки данных)
 - Money & State Invariants
@@ -128,18 +128,19 @@
 
 ### 🗄️ [`database-audit/`](./database-audit)
 
-**Глубокий аудит БД и моделей**
+**Глубокий аудит БД с MCP-integration**
 
-11 фаз + 2 мини, ~60-240 минут.
+14 фаз · 30 детекторов · 11 ORM · Serena+GitNexus.
 
-- Schema design (Date, Karwin, Celko)
-- Indexes (Winand, Schwartz)
-- N+1, EXPLAIN, query patterns
-- Transactions, money & state invariants
-- Migrations zero-downtime (Sadalage)
-- PII, encryption, GDPR, ops
+- **SQLi detection** через `$queryRawUnsafe` + ORM wrappers
+- **Race conditions** + Float-money + idempotency
+- **PII** (passwords, OAuth tokens, payment cards)
+- **FK indexes**, N+1 с confidence ranking
+- **Auth bypass** + cross-tenant leak (GitNexus cypher)
+- **Migrations** zero-downtime (Sadalage Part II)
+- **Auto-fill** phase 11 deep_dive через GitNexus impact
 
-**Для:** проектов с БД (Postgres, MySQL, Mongo, ...). Любая ORM. Static + опц. live mode с `DATABASE_URL`.
+**Для:** проектов с БД (Postgres, MySQL, Mongo, ...). 11 ORM: Prisma, Drizzle, TypeORM, Sequelize, Mongoose, SQLAlchemy, Django, GORM, ActiveRecord, Hibernate, raw SQL. Static + опц. live mode с `DATABASE_URL`.
 
 [Запустить →](./database-audit)
 

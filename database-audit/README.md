@@ -1,20 +1,21 @@
 <div align="center">
 
-  <h1>🗄️ Database Audit Pipeline <code>v3</code></h1>
+  <h1>🗄️ Database Audit Pipeline <code>v4</code></h1>
 
   <p>
-    <b>Production-grade manifest-driven аудит БД.</b><br/>
-    Chunked AI discovery · 11 ORM · 27 детекторов · category-based IDs · dedup · live preflight · HTML viewer.
+    <b>Production-grade manifest-driven аудит БД с 100% MCP integration.</b><br/>
+    Chunked AI discovery · Serena LSP + GitNexus cypher · 30 детекторов · 11 ORM · auto-fill phase 11/10a.
   </p>
 
   <p>
-    <img src="https://img.shields.io/badge/version-v3-orange" alt="v3"/>
+    <img src="https://img.shields.io/badge/version-v4-orange" alt="v4"/>
     <img src="https://img.shields.io/badge/architecture-manifest--driven-blue" alt="Manifest-driven"/>
-    <img src="https://img.shields.io/badge/orm-11_supported-purple" alt="11 ORMs"/>
-    <img src="https://img.shields.io/badge/detectors-27-green" alt="27 detectors"/>
+    <img src="https://img.shields.io/badge/MCP-Serena%20%2B%20GitNexus-purple" alt="MCP native"/>
+    <img src="https://img.shields.io/badge/detectors-30-green" alt="30 detectors"/>
+    <img src="https://img.shields.io/badge/ORM-11_supported-success" alt="11 ORMs"/>
+    <img src="https://img.shields.io/badge/SQLi-detected-red" alt="SQLi detection"/>
+    <img src="https://img.shields.io/badge/auto--fill-phase_11/10a-9b59b6" alt="Auto-fill"/>
     <img src="https://img.shields.io/badge/mode-read--only-success" alt="Read-only"/>
-    <img src="https://img.shields.io/badge/exit_gates-hard-red" alt="Hard exit gates"/>
-    <img src="https://img.shields.io/badge/2026-state--of--art-9b59b6" alt="2026 stack"/>
   </p>
 
   <p>
@@ -27,169 +28,312 @@
 
 <br/>
 
-> **v3 = идеальная итерация v2.** Chunked discovery (главный + 5 sub-prompts), category-based IDs, fingerprint-dedup, live mode preflight, `init.sh --refresh`, HTML viewer, и 11 ORM в parser. Литература обновлена под 2026 (Petrov, Pavlo CMU 2024-2025, Mihalcea 3rd ed, pgroll, Atlas, NIST SP 800-218).
+> **v4 — финальная итерация.** ИИ-модель глубоко сканирует проект через **Serena LSP** (semantic navigation) и **GitNexus** (knowledge graph + cypher), фиксирует все факты в manifest. Дальше **30 детерминированных детекторов** работают строго по манифесту — без эвристик «угадай где Prisma». Автогенерация phase 11 deep_dive (trace + blast radius через `gitnexus impact`) и phase 10a adversary review.
 
 ---
 
-## Что делает v3 уникально
+## Что находит этот пайплайн
 
-1. **Самодостаточный** — пользователь даёт одну команду `bash database-audit/init.sh`, дальше всё контролируется промтами.
-2. **Universal stack** — Prisma, Drizzle, TypeORM, Sequelize, **Mongoose**, **GORM**, **ActiveRecord**, **Hibernate**, SQLAlchemy, Django, raw SQL.
-3. **Modern (2026)** — pgvector, TimescaleDB, Citus, RLS multi-tenant, CDC/outbox.
-4. **No false-confidence** — `confidence_rationale ≥ 40` для high; `exploit_proof ≥ 40` для critical; sanity thresholds ловят пустые секции.
-5. **Repeatable** — `init.sh --refresh` делает diff с last manifest, обновляет только релевантные секции.
-6. **Visual** — `viewer/index.html` показывает findings с фильтрами и expand-evidence.
+### 🔴 Critical issues (блокируют деплой)
 
----
+| # | Что | Как находим | Источник |
+|---|---|---|---|
+| 1 | **SQL Injection** через `$queryRawUnsafe`/`$executeRawUnsafe` | `find_raw_sql_unsafe.py` + dynamic interpolation detection + GitNexus cypher | Karwin §20, OWASP |
+| 2 | **Race conditions** в денежных операциях (lost update, write skew) | `find_transactions.py` + body inspection через Serena `find_symbol include_body=true` | Bernstein & Newcomer §6, Kleppmann §7 |
+| 3 | **Float для денег** (precision drift) | `find_money_floats.py` с `business_critical` calibration | Karwin §9 Rounding Errors |
+| 4 | **Отсутствие idempotency** на money endpoints | `find_no_idempotency.py` через `manifest.hints.money_endpoints` | Helland *Life Beyond Distributed Transactions* |
+| 5 | **Plain credentials/passwords** в БД | `find_pii_extended.py` (passwords, refresh_token, oauth_token, api_secret, webhook_secret) | NIST SP 800-218, GDPR Art. 32 |
+| 6 | **Cross-tenant data leakage** | GitNexus cypher `MATCH (h:Handler)-[:CALLS*]->(q) WHERE NOT q.body CONTAINS tenant_id` | OWASP Multi-tenant guidelines |
 
-## Workflow
+### 🟠 High-impact issues
 
-```
-┌──────────────────────────────────────────────────────────┐
-│  STAGE 0: INIT — bash database-audit/init.sh              │
-│                                                           │
-│   1. Стейджинг промта в database-audit/_staging/init.md                    │
-│   2. ИИ читает orchestrator prompts/00_discover.md        │
-│   3. ИИ загружает sub-prompts по необходимости:           │
-│      - 00a money    - 00b transactions                    │
-│      - 00c pii      - 00d n+1                             │
-│      - 00e migrations                                     │
-│   4. ИИ создаёт database-audit/manifest.yml               │
-│   5. validate_manifest.py --strict                        │
-│   6. ИИ останавливается, ждёт user review                 │
-└──────────────────────────────────────────────────────────┘
-                          ↓
-┌──────────────────────────────────────────────────────────┐
-│  STAGE 1..N: PHASES — bash database-audit/run.sh all      │
-│                                                           │
-│   1. validate_manifest                                    │
-│   2. preflight (если live mode)                           │
-│   3. Гонит детекторы по phase_plan из manifest            │
-│   4. validate_phase.sh exit 0 после каждой                │
-│   5. finalize.sh + _meta.json                             │
-└──────────────────────────────────────────────────────────┘
-                          ↓
-┌──────────────────────────────────────────────────────────┐
-│  REVIEW: viewer/index.html  +  database-audit/results/ROADMAP.md           │
-└──────────────────────────────────────────────────────────┘
-```
+| # | Что | Как находим |
+|---|---|---|
+| 7 | **FK без индекса** | `find_missing_fk_indexes.py` парсит `schema_summary.json` |
+| 8 | **N+1 queries** с confidence ranking | `find_n_plus_one.py`: high (for-loop с iterator-зависимым ORM call) / medium (Promise.all+map) / low (likely false positive) |
+| 9 | **Custom SQL wrappers без параметризации** (`dbExec`, `dbQuery`) | `find_orm_wrappers.py` — surface для review |
+| 10 | **Auth bypass** на /api/* | GitNexus cypher: handlers без `withAuth` middleware |
+| 11 | **Dangerous DDL** в миграциях (DROP без `IF EXISTS`, `CREATE INDEX` без `CONCURRENTLY`, large-tx-wrap) | `find_dangerous_ddl.py` |
+| 12 | **External I/O внутри транзакций** (Helland antipattern) | `manifest.hints.transaction_sites[].kind == external-io-inside-transaction` |
+| 13 | **Connection pool multiplication** (`max=20 × N сервисов = exhaustion`) | `find_pool_settings.py` |
+| 14 | **Long-lived DB credentials** в коде/env | `gitleaks` integration в `find_secrets_in_repo.py` |
+
+### 🟡 Medium / quality issues
+
+| # | Что | Как находим |
+|---|---|---|
+| 15 | Mixed naming (`snake_case` + `camelCase` в одной схеме) | `find_naming_inconsistency.py` |
+| 16 | JSON columns где должна быть нормализация (Karwin §5 EAV) | `find_json_overuse.py` |
+| 17 | `status TEXT` без `CHECK constraint` | `find_status_without_check.py` |
+| 18 | `SELECT *` в hot paths | `find_select_star.py` |
+| 19 | Forward-only миграции без rollback strategy | `find_reversibility.py` |
+| 20 | Отсутствие slow query log / pg_stat_statements | `find_observability.py` |
+| 21 | Backup без verified restore drill | `find_backup_strategy.py` |
 
 ---
 
-## Что внутри
+## Как работает анализ
+
+### Stage 0 — Discovery (один раз на проект)
 
 ```
-database-audit/
-├── README.md                           ← ты здесь
-├── 00_START_HERE.md                    ← точка входа
-├── 01_ORCHESTRATOR.md                  ← правила Stage 1..N
-├── REFERENCE_TOOLS.md                  ← Serena, GitNexus, SQL utils
-├── REFERENCE_BOOKS.md                  ← классика
-├── REFERENCE_2026_STATE_OF_ART.md      ← НОВОЕ — modern источники
-├── TEMPLATES.md                        ← формат findings, ROADMAP
-├── CHANGELOG.md
-│
-├── init.sh                             ← STAGE 0 + --refresh
-├── run.sh                              ← STAGE 1..N + preflight
-│
-├── manifest.schema.yml                 ← JSON Schema (с 2026 hints)
-├── manifest.example.yml                ← пример (Prisma-монорепо)
-│
-├── prompts/                            ← chunked discovery (8 файлов)
-│   ├── 00_discover.md                  ← orchestrator
-│   ├── 00a_discover_money.md           ← deep money
-│   ├── 00b_discover_transactions.md    ← deep transactions
-│   ├── 00c_discover_pii.md             ← deep PII
-│   ├── 00d_discover_n_plus_one.md      ← N+1 vetting
-│   ├── 00e_discover_migrations.md      ← migrations + DDL
-│   ├── 00z_validate_manifest.md        ← self-validation
-│   └── refresh.md                      ← для --refresh
-│
-├── phases/                             ← 14 phase docs
-│
-├── detectors/                          ← 27 детекторов
-│   ├── extract_schema.py               ← 11 ORM parsers
-│   ├── extract_query_inventory.py
-│   ├── find_money_floats.py            ← КЛЮЧЕВОЙ + dedup
-│   ├── find_n_plus_one.py              ← confidence ranking
-│   ├── find_missing_fk_indexes.py
-│   ├── find_select_star.py
-│   ├── find_string_concat_sql.py
-│   ├── find_transactions.py
-│   ├── find_no_idempotency.py
-│   ├── find_dangerous_ddl.py
-│   ├── find_migrations.py
-│   ├── find_pool_settings.py
-│   ├── find_pii_in_logs.py
-│   ├── find_naming_inconsistency.py
-│   ├── find_json_overuse.py
-│   ├── find_status_without_check.py
-│   ├── synthesize_roadmap.py           ← auto-TL;DR
-│   ├── adversary_review.py
-│   ├── deep_dive.py
-│   └── ... + 8 stub-детекторов
-│
-├── validators/
-│   ├── validate_manifest.py            ← --strict mode
-│   ├── preflight.py                    ← НОВОЕ — live mode preflight
-│   ├── validate_phase.sh               ← per-phase gate
-│   ├── validate_confidence.py
-│   ├── check_evidence_citations.py
-│   ├── generate_meta_json.py
-│   └── finalize.sh
-│
-├── lib/
-│   ├── env.sh                          ← AUDIT_DIR / PROJECT_ROOT / MANIFEST
-│   ├── manifest_lib.py                 ← + dedup helpers
-│   ├── id_gen.py                       ← НОВОЕ — category IDs + fingerprint
-│   └── stack_aware.py                  ← НОВОЕ — ORM patterns
-│
-└── viewer/
-    └── index.html                      ← НОВОЕ — HTML просмотр findings
+bash database-audit/init.sh
+        ↓
+ИИ-модель читает database-audit/_staging/init.md
+        ↓
+┌─────────────────────────────────────────────────┐
+│ 00_discover.md — orchestrator (skeleton)        │
+│   ↓                                              │
+│ 00a_discover_money.md — money columns + endpoints│
+│ 00b_discover_transactions.md — race candidates   │
+│ 00c_discover_pii.md — PII + secrets              │
+│ 00d_discover_n_plus_one.md — N+1 vetting         │
+│ 00e_discover_migrations.md — migrations + DDL    │
+│ 00f_discover_serena_deep.md — Serena LSP проход  │
+│ 00g_discover_gitnexus_graph.md — GitNexus cypher │
+│ 00z_validate_manifest.md — self-validation gate  │
+└─────────────────────────────────────────────────┘
+        ↓
+database-audit/manifest.yml (project-specific facts)
+```
+
+**Что использует ИИ при discovery:**
+
+- **Serena MCP** (LSP-based):
+  - `find_symbol(name, include_body=true)` для каждой transaction-функции
+  - `find_referencing_symbols(column)` для каждой money колонки → точные usage sites
+  - `search_for_pattern(regex, glob)` для SQLi surface
+  - `write_memory()` для прогресса аудита
+
+- **GitNexus MCP** (knowledge graph):
+  - `route_map` — все HTTP endpoints проекта
+  - `impact <symbol> --direction upstream` — blast radius (для phase 11)
+  - `context <symbol>` — 360° view callers/callees/processes
+  - `cypher` — 7 готовых запросов:
+    1. SQLi callers: `MATCH (caller)-[:CALLS]->(target {name:'$queryRawUnsafe'})`
+    2. Auth bypass: handlers без `withAuth` middleware
+    3. Race candidates: SELECT+UPDATE без `FOR UPDATE` / `$transaction`
+    4. Cross-tenant leak: query без `tenant_id` filter
+    5. N+1 graph-based: ORM call в for-body
+    6. Vector search: `embedding <=>` использование
+    7. Money writes: все `WRITES → balance/amount/cost`
+
+### Stage 1..N — Phases (повторяемо)
+
+```
+bash database-audit/run.sh all
+        ↓
+┌──────────────────────────────────────┐
+│ Phase 00 — Setup                     │  valid manifest + preflight (live mode)
+│ Phase 01 — Inventory                 │  extract_schema, extract_query_inventory
+│ Phase 02 — Schema Design             │  find_money_floats, find_naming, find_json, find_status
+│ Phase 03 — Indexes & Keys            │  find_missing_fk_indexes, find_index_recommendations
+│ Phase 04 — Query Patterns            │  find_n_plus_one, find_select_star, find_string_concat_sql
+│ Phase 05 — Transactions Consistency  │  find_transactions, find_isolation_levels
+│ Phase 05b — Money Invariants         │  find_money_floats, find_no_idempotency, find_atomic_updates
+│ Phase 06 — Migrations Evolution      │  find_migrations, find_dangerous_ddl, find_reversibility
+│ Phase 07 — Data Integrity & Security │  find_string_concat_sql, find_raw_sql_unsafe (NEW),
+│                                      │  find_orm_wrappers (NEW), find_pii_extended (NEW), find_pii_in_logs
+│ Phase 08 — Performance & Scaling     │  find_pool_settings, find_cache_strategy
+│ Phase 09 — Observability & Ops       │  find_observability, find_backup_strategy
+│ Phase 10 — Synthesis                 │  synthesize_roadmap → ROADMAP.md + auto-TL;DR
+│ Phase 10a — Self-Audit               │  adversary_review → bias-check + reclassification
+│ Phase 11 — Deep Dive                 │  deep_dive → 6 секций per critical finding
+│                                      │    sections 1, 3 auto-populated через GitNexus
+│                                      │    sections 2, 4, 5, 6 — agent fills (creative)
+└──────────────────────────────────────┘
+        ↓
+finalize.sh exit 0
+        ↓
+database-audit/results/ — все артефакты
+```
+
+### Hard exit gates (не пропускают slop)
+
+После каждой фазы — `validate_phase.sh NN`:
+
+1. ✅ Findings count ≥ scaled quota (по `manifest.project.size`)
+2. ✅ Все `confidence: high` имеют `confidence_rationale ≥ 40` символов
+3. ✅ Все `severity: critical` имеют `exploit_proof ≥ 40` символов
+4. ✅ `location.lines` непустой для high
+5. ✅ Required evidence файлы присутствуют
+6. ✅ Stop-words отсутствуют («допустимо», «приемлемо» — запрещены)
+7. ✅ **v4: Phase 11 sections не содержат `_agent fills_` placeholders**
+8. ✅ **v4: Phase 10a `_adversary_review.md` > 500 байт + не template**
+
+`finalize.sh` блокирует завершение если хоть один gate не прошёл.
+
+---
+
+## Файловая структура
+
+```
+project/
+└── database-audit/                    ← всё внутри одной папки
+    │
+    │── pipeline (committed code) ─────────────────────────
+    ├── README.md                      ← ты здесь
+    ├── 00_START_HERE.md
+    ├── 01_ORCHESTRATOR.md
+    ├── REFERENCE_TOOLS.md             ← Serena/GitNexus/SQL utils
+    ├── REFERENCE_BOOKS.md             ← классика (Date, Karwin, Winand, ...)
+    ├── REFERENCE_2026_STATE_OF_ART.md ← modern (Petrov, Pavlo CMU, pgroll)
+    ├── REFERENCE_MCP_TOOLS.md         ← Serena+GitNexus cookbook (7 cypher queries)
+    ├── TEMPLATES.md
+    ├── TOOLS_VERSIONS.md              ← зависимости + CVE awareness
+    ├── CHANGELOG.md
+    │
+    ├── init.sh                        ← STAGE 0 + --refresh
+    ├── run.sh                         ← STAGE 1..N + reset
+    ├── requirements.txt               ← PyYAML>=6.0, jsonschema>=4.23
+    │
+    ├── manifest.schema.yml            ← JSON Schema (с 2026 hints)
+    ├── manifest.example.yml           ← Prisma-monorepo пример
+    │
+    ├── prompts/                       ← chunked discovery (10 files)
+    │   ├── 00_discover.md             ← orchestrator
+    │   ├── 00a..00e_discover_*.md     ← deep по теме
+    │   ├── 00f_discover_serena_deep.md     ← v4 — Serena LSP
+    │   ├── 00g_discover_gitnexus_graph.md  ← v4 — GitNexus cypher
+    │   ├── 00z_validate_manifest.md        ← self-validation
+    │   └── refresh.md                       ← --refresh mode
+    │
+    ├── phases/                        ← 14 phase docs
+    │
+    ├── detectors/                     ← 30 детекторов:
+    │   ├── extract_schema.py          ← 11 ORM (Prisma/Drizzle/TypeORM/Sequelize/
+    │   │                                Mongoose/SQLAlchemy/Django/GORM/ActiveRecord/
+    │   │                                Hibernate/raw SQL)
+    │   ├── extract_query_inventory.py
+    │   │
+    │   ├── find_money_floats.py       ← с business_critical calibration
+    │   ├── find_no_idempotency.py
+    │   ├── find_transactions.py
+    │   ├── find_atomic_updates.py
+    │   │
+    │   ├── find_missing_fk_indexes.py
+    │   ├── find_index_recommendations.py
+    │   │
+    │   ├── find_n_plus_one.py         ← confidence ranking
+    │   ├── find_select_star.py
+    │   ├── find_string_concat_sql.py
+    │   ├── find_raw_sql_unsafe.py     ← v4 — $queryRawUnsafe SQLi
+    │   ├── find_orm_wrappers.py       ← v4 — dbExec/dbQuery surface
+    │   │
+    │   ├── find_isolation_levels.py
+    │   ├── find_dangerous_ddl.py
+    │   ├── find_migrations.py
+    │   ├── find_reversibility.py
+    │   │
+    │   ├── find_pii_in_logs.py
+    │   ├── find_pii_extended.py       ← v4 — passwords/tokens/payment-card
+    │   ├── find_secrets_in_repo.py
+    │   │
+    │   ├── find_pool_settings.py
+    │   ├── find_cache_strategy.py
+    │   ├── find_observability.py
+    │   ├── find_backup_strategy.py
+    │   │
+    │   ├── find_naming_inconsistency.py
+    │   ├── find_json_overuse.py
+    │   ├── find_status_without_check.py
+    │   │
+    │   ├── synthesize_roadmap.py      ← auto-TL;DR + categorical map
+    │   ├── adversary_review.py        ← v4 — auto-draft + bias check
+    │   └── deep_dive.py               ← v4 — GitNexus auto-fill trace+blast
+    │
+    ├── validators/
+    │   ├── validate_manifest.py       ← strict mode + sanity thresholds
+    │   ├── preflight.py               ← live mode + read-only role check
+    │   ├── validate_phase.sh          ← v4 enforcement (no skeleton)
+    │   ├── validate_confidence.py
+    │   ├── check_evidence_citations.py
+    │   ├── generate_meta_json.py
+    │   └── finalize.sh
+    │
+    ├── lib/
+    │   ├── env.sh                     ← PIPELINE_DIR/AUDIT_DIR/MANIFEST/STAGING_DIR
+    │   ├── manifest_lib.py            ← + dedup helpers
+    │   ├── id_gen.py                  ← category IDs (DB-MONEY-001) + fingerprint
+    │   └── stack_aware.py             ← ORM-specific regex patterns
+    │
+    ├── viewer/
+    │   └── index.html                 ← интерактивный HTML просмотр findings
+    │
+    ├── .gitignore                     ← исключает runtime ↓
+    │
+    │── runtime (gitignored) ──────────────────────────────
+    ├── manifest.yml                   ← создаётся ИИ при init
+    ├── _staging/                      ← prompts для ИИ
+    │   ├── init.md                    ← создаётся при init.sh
+    │   └── refresh.md                 ← создаётся при init.sh --refresh
+    └── results/
+        ├── findings.jsonl             ← все findings, category-based IDs
+        ├── ROADMAP.md                 ← главный артефакт + auto-TL;DR
+        ├── _meta.json                 ← машинная сводка (verdict + counts)
+        ├── 11_deep_dive.md            ← critical-only forensic-grade
+        ├── _adversary_review.md       ← bias-check
+        ├── _known_unknowns.md         ← static-mode limitations
+        ├── 10a_self_audit.md
+        ├── 10_synthesis.md
+        ├── 00_setup.md … 09_*.md      ← phase reports
+        └── evidence/                  ← all detector outputs
+            ├── 01_phase/schema_summary.json
+            ├── 04_phase/n_plus_one_suspects.md
+            ├── 07_phase/raw_sql_unsafe.md
+            ├── 07_phase/orm_wrappers.md
+            ├── 07_phase/pii_extended.md
+            └── _serena_gitnexus/      ← GitNexus cypher results
 ```
 
 ---
 
 ## Quick start
 
-### 1. Установка (один раз)
+### 1. Установка (один раз на машину)
 
 ```bash
-# Serena + GitNexus
+# Serena (MCP server)
 uv tool install -p 3.13 serena-agent@latest --prerelease=allow
 claude mcp add serena -- serena start-mcp-server --context ide-assistant
+
+# GitNexus (MCP server + CLI)
 npm install -g gitnexus
 gitnexus setup
 
 # Базовые
-sudo apt install jq python3 ripgrep
-pip install pyyaml jsonschema
+sudo apt install jq python3 python3-pip ripgrep git
+pip install -r database-audit/requirements.txt   # PyYAML>=6.0, jsonschema>=4.23
 
-# Опц. для live mode
+# Опц. для live mode (зависит от вашей БД)
 sudo apt install postgresql-client mysql-client
-# Опц. для viewer
-# (любой http-server, python -m http.server подойдёт)
+# mongosh: https://www.mongodb.com/try/download/shell
 ```
 
-### 2. Скопировать в проект
+См. полную справку зависимостей в [`TOOLS_VERSIONS.md`](./TOOLS_VERSIONS.md).
+
+### 2. Скопировать в проект + индексировать
 
 ```bash
-cp -r /path/to/audit-pipelines/database-audit/ /your/project/
 cd /your/project
-gitnexus analyze --embeddings
+cp -r /path/to/audit-pipelines/database-audit .
+gitnexus analyze --embeddings   # индексирует код для cypher queries
 ```
 
-### 3. INIT (один раз на проект)
+### 3. INIT — discovery
 
 ```bash
 bash database-audit/init.sh
-# ↓
-# Открой Claude Code, дай команду:
-#   Прочитай database-audit/_staging/init.md и выполни discover-фазу. Создай database-audit/manifest.yml.
-# ↓
-# ИИ выполнит chunked discovery (orchestrator + 5 sub-prompts) — ~30-90 минут.
-# Результат: database-audit/manifest.yml
 ```
+
+Откройте Claude Code в этой директории:
+
+```
+Прочитай database-audit/_staging/init.md и выполни discover-фазу.
+Создай database-audit/manifest.yml.
+```
+
+ИИ выполнит chunked discovery (orchestrator + 7 sub-prompts включая Serena+GitNexus deep). Результат — `database-audit/manifest.yml`.
 
 ### 4. Review manifest
 
@@ -198,9 +342,9 @@ python3 database-audit/validators/validate_manifest.py database-audit/manifest.y
 less database-audit/manifest.yml
 ```
 
-Поправь yaml вручную если ИИ что-то пропустил.
+При необходимости отредактируйте yaml вручную (например, пометить `business_critical: false` для AI-token-cost полей).
 
-### 5. RUN
+### 5. RUN — все фазы
 
 ```bash
 bash database-audit/run.sh all
@@ -213,71 +357,167 @@ cat database-audit/results/ROADMAP.md
 jq . database-audit/results/_meta.json
 
 # HTML viewer
-cd audit && cp ../database-audit/viewer/index.html .
+cd database-audit/results
+cp ../viewer/index.html .
 python3 -m http.server 8000
-# открой http://localhost:8000/index.html
+# открыть http://localhost:8000/index.html
 ```
 
-### 7. Refresh (через 1-3 месяца)
+### 7. Refresh (после изменений в проекте)
 
 ```bash
 bash database-audit/init.sh --refresh
-# ИИ найдёт diff и обновит только изменённые секции
+```
+
+ИИ найдёт diff с git_head из `manifest.refresh_state`, обновит только релевантные секции.
+
+### 8. Reset (clean restart)
+
+```bash
+bash database-audit/run.sh reset
+# → удаляет manifest.yml, _staging/, results/
+# → pipeline код остаётся
 ```
 
 ---
 
-## Что v3 фиксит
+## Findings формат
 
-| v2 → v3 | Решение |
+Каждый finding в `database-audit/results/findings.jsonl`:
+
+```json
+{
+  "id": "DB-MONEY-001",
+  "phase": "05b",
+  "category": "money",
+  "subcategory": "no-idempotency",
+  "severity": "critical",
+  "confidence": "high",
+  "title": "deductFromBalance не имеет idempotency_key",
+  "location": {
+    "file": "apps/crm/src/features/content/lib/cbr.ts",
+    "lines": "40-99",
+    "symbol": "deductFromBalance",
+    "db_object": "content_projects.balanceRub"
+  },
+  "evidence": "Function signature accepts (projectId, costUsd) — no operation id...",
+  "confidence_rationale": "Прочитана функция через find_symbol include_body=true; параметр idempotency_key отсутствует...",
+  "exploit_proof": "Worker deducts balance and crashes before marking job as charged. Retry calls same function — second deduction.",
+  "impact": "Двойное списание клиента при retry/worker crash.",
+  "recommendation": "1) Add operation_id parameter. 2) Unique constraint (project_id, operation_id) в БД. 3) Idempotent endpoint.",
+  "effort": "M",
+  "references": [
+    "Helland, Life Beyond Distributed Transactions",
+    "Kleppmann, Designing Data-Intensive Applications Ch. 7"
+  ]
+}
+```
+
+**Category-based IDs** (легко группировать):
+
+| Prefix | Категория |
 |---|---|
-| Дубли findings (DB-0002 + DB-0040 одно и то же) | Fingerprint-dedup + category-based ID |
-| Глобальная нумерация (DB-0042) — непонятно где | `DB-MONEY-001`, `DB-IDX-042`, `DB-TX-007` |
-| `find_n_plus_one` — все кандидаты one weight | Confidence ranking по 4 уровням |
-| Только 5 ORM в schema parser | 11 ORM (включая Mongoose, GORM, ActiveRecord, Hibernate) |
-| Discover-промт overwhelming на больших проектах | Chunked: orchestrator + 5 sub-prompts + validation gate |
-| Manual update manifest при изменениях | `init.sh --refresh` с diff |
-| Live mode не верифицирован до запуска | `preflight.py` проверяет DSN + client + read-only role |
-| ROADMAP.md без авто-TL;DR | `synthesize_roadmap.py` генерирует bullets из severity × category |
-| Только текстовый просмотр findings | `viewer/index.html` с фильтрами |
-| Литература до 2017 в основном | Petrov, Pavlo CMU 2024-2025, Mihalcea 3rd ed, pgroll, Atlas |
+| `DB-MONEY-***` | money/balance issues |
+| `DB-IDX-***` | indexes |
+| `DB-TX-***` | transactions |
+| `DB-SEC-***` | security (SQLi, auth bypass) |
+| `DB-PII-***` | PII unencrypted |
+| `DB-SCH-***` | schema design |
+| `DB-MIG-***` | migrations |
+| `DB-PERF-***` | performance |
+| `DB-QRY-***` | queries |
+| `DB-OPS-***` | operations |
 
 ---
 
-## Modern 2026 patterns в manifest
+## Confidence calibration
+
+| Confidence | Когда |
+|---|---|
+| `high` | Прочитал строки и цитирую; статически видно или EXPLAIN; нет правдоподобного контр-объяснения; **`confidence_rationale ≥ 40` символов** |
+| `medium` | Видел паттерн, но эффект зависит от рантайма/нагрузки; ручная валидация частична |
+| `low` | Грубая эвристика; ручная валидация не проводилась |
+
+**Запреты (нарушение → откат severity):**
+- `critical` без `exploit_proof ≥ 40` символов с конкретным сценарием
+- `high` confidence для performance findings без EXPLAIN или прямой статической очевидности
+- `high` для transaction findings без чтения тела функции
+
+---
+
+## Smoke test (vechkasov, 90k LOC monorepo)
+
+```
+Total findings: 111
+Critical:    14
+High:        67
+Medium:      29
+Low:          1
+Verdict:     fail (есть critical)
+
+By category:
+  DB-IDX:    30  (FK без индекса)
+  DB-SEC:    29  (SQLi $queryRawUnsafe + cmsApiKey)
+  DB-PII:    27  (passwords, tokens, secrets)
+  DB-MONEY:  11
+  DB-SCH:    10
+  DB-TX:      1  (deductFromBalance race)
+  DB-MIG:     1
+  DB-QRY:     1
+  DB-PERF:    1
+
+Highlights:
+  - 27 SQLi findings (главный фикс v3 → v4)
+  - 70 $queryRawUnsafe hits в 27 файлах
+  - 249 ORM wrapper definitions (dbExec/dbQuery surface)
+  - 156 N+1 candidates с confidence ranking
+  - 30 FK без индекса в 9 prisma schemas
+```
+
+---
+
+## Integration points
+
+### CI/CD
+
+`database-audit/results/_meta.json` машиночитаем — можно собрать GitHub Action:
 
 ```yaml
-hints:
-  vector_db_indexes:           # pgvector / Pinecone / Qdrant
-    - table: embeddings
-      column: vector
-      dimension: 1536
-      metric: cosine
-      index_type: hnsw
-  time_series_tables:           # TimescaleDB / native partitioning
-    - table: events
-      partitioning: hypertable
-      retention_policy: "30 days"
-  sharding_strategy:            # Citus / Vitess
-    enabled: true
-    kind: hash
-    shard_key: tenant_id
-  multi_tenant_isolation:       # RLS / discriminator / schema-per-tenant
-    model: row-level-security
-    discriminator_column: tenant_id
-  cdc_outbox_pattern:           # Debezium / outbox / event-sourcing
-    enabled: true
-    tool: custom-outbox
-    outbox_table: events_outbox
+- run: bash database-audit/run.sh all
+- run: |
+    verdict=$(jq -r .verdict database-audit/results/_meta.json)
+    if [ "$verdict" = "fail" ]; then
+      echo "::error::DB audit verdict=fail"
+      jq -r '.blockers[]' database-audit/results/_meta.json
+      exit 1
+    fi
+```
+
+### Live mode
+
+```bash
+export DATABASE_URL="postgresql://readonly:***@host:5432/dbname"
+# В manifest: mode.type: live
+bash database-audit/run.sh preflight   # verifies read-only role
+bash database-audit/run.sh all         # adds EXPLAIN, pg_indexes, pg_stat_statements
+```
+
+### Multi-project
+
+```bash
+cd project-a && bash database-audit/init.sh && bash database-audit/run.sh all
+cd project-b && bash database-audit/init.sh && bash database-audit/run.sh all
+# Каждый проект имеет свой database-audit/manifest.yml + results/
 ```
 
 ---
 
 ## Литература
 
-См. полные списки в:
-- [`REFERENCE_BOOKS.md`](./REFERENCE_BOOKS.md) — классика (Date, Karwin, Winand, Schwartz, Smith, Sadalage, Kleppmann, Mihalcea, Helland, Bernstein)
-- [`REFERENCE_2026_STATE_OF_ART.md`](./REFERENCE_2026_STATE_OF_ART.md) — modern (Petrov, Pavlo, Fontaine, Schönig, pgroll, Atlas, NIST SP 800-218)
+См. полные списки:
+- [`REFERENCE_BOOKS.md`](./REFERENCE_BOOKS.md) — Date, Karwin, Winand, Schwartz, Smith, Sadalage, Kleppmann, Mihalcea, Helland, Bernstein
+- [`REFERENCE_2026_STATE_OF_ART.md`](./REFERENCE_2026_STATE_OF_ART.md) — Petrov *Database Internals*, Pavlo CMU 15-445/15-721 (2024-2025), Mihalcea 3rd ed, Fontaine *Art of PostgreSQL*, Schönig *Mastering PostgreSQL 15*, pgroll, Atlas, NIST SP 800-218
+- [`REFERENCE_MCP_TOOLS.md`](./REFERENCE_MCP_TOOLS.md) — Serena + GitNexus cookbook (7 cypher queries для DB-аудита)
 
 ---
 
