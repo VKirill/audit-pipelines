@@ -43,8 +43,33 @@ if (( ${#need[@]} )); then
   exit 1
 fi
 
-python3 -c 'import yaml' 2>/dev/null || { c_red "PyYAML required: pip install pyyaml"; exit 1; }
-python3 -c 'import jsonschema' 2>/dev/null || c_yellow "jsonschema not installed (recommended: pip install jsonschema)"
+# Python deps with minimum-version checks
+python3 -c "import yaml; assert tuple(int(x) for x in yaml.__version__.split('.')[:2]) >= (6,0), yaml.__version__" 2>/dev/null     || { c_red "PyYAML >= 6.0 required (current: $(python3 -c 'import yaml; print(yaml.__version__)' 2>/dev/null || echo 'not installed')). Install: pip install -r database-audit/requirements.txt"; exit 1; }
+
+python3 -c "
+import sys
+try:
+    from importlib.metadata import version
+    v = version('jsonschema')
+except Exception:
+    import jsonschema
+    v = jsonschema.__version__
+maj, mn, *_ = (int(x) for x in v.split('.')[:2] + [0]*2)
+if (maj, mn) < (4, 23):
+    print(f'WARN: jsonschema {v} < 4.23 (CVE-2023-22102). Upgrade: pip install --upgrade -r database-audit/requirements.txt', file=sys.stderr)
+    sys.exit(2)
+" 2>/dev/null
+case $? in
+    0) ;;  # ok
+    1) c_yellow "jsonschema not installed (validator will skip schema check). Install: pip install -r database-audit/requirements.txt" ;;
+    2) c_yellow "jsonschema below 4.23 — security CVE present. Recommended: pip install --upgrade -r database-audit/requirements.txt" ;;
+esac
+
+# CLI tool version check (warn-only)
+ripgrep_version=$(rg --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+' | head -1)
+if [[ -n "$ripgrep_version" ]] && [[ $(echo "$ripgrep_version 13.0" | awk '{print ($1 < $2)}') == "1" ]]; then
+    c_yellow "ripgrep $ripgrep_version < 13.0 — some glob patterns may not work. Recommended: 14.1+"
+fi
 
 [[ -f "$SCRIPT_DIR/manifest.schema.yml" ]] || { c_red "Pipeline files missing"; exit 1; }
 
