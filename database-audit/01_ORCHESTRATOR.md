@@ -1,279 +1,209 @@
-# 01 — ORCHESTRATOR (v1)
+# 01 — ORCHESTRATOR (v2)
 
-**Это главный диспетчер пайплайна. Ты вернёшься в этот документ между фазами.**
+**Это главный диспетчер пайплайна для STAGE 1..N (выполнение фаз).**
 
-> Архитектурно повторяет `codebase/v3`, специализирован под БД. Все методы валидации (детерминированные exit gates, `confidence_rationale`, `exploit_proof`, anti-recursion) переиспользованы.
+> **STAGE 0 (discover) описан отдельно** в `prompts/00_discover.md`. Оркестратор работает уже после того, как `database-audit.manifest.yml` создан и валиден.
 
 ---
 
-## 1. Архитектура пайплайна
-
-Пайплайн — **11 основных фаз + 2 мини + 1 опциональная** (всё обязательное при наличии critical).
+## 1. Архитектура v2
 
 ```
-phase_00_setup.md                       → подготовка, детект стека, опц. live-DB connect, run_external_tools.sh
-phase_01_inventory.md                   → инвентаризация БД, моделей, миграций, raw SQL
-phase_02_schema_design.md               → нормализация, типы, naming, NULL/DEFAULT, constraints
-phase_03_indexes_keys.md                → PK, FK, индексы, missing/redundant
-phase_04_query_patterns.md              → N+1, SELECT *, JOIN-патология, EXPLAIN top-N
-phase_05_transactions_consistency.md    → isolation, race, atomicity, deadlocks
-phase_05b_money_invariants.md           → МИНИ: денежные/счётные/state-инварианты
-phase_06_migrations_evolution.md        → обратимость, zero-downtime, backfill
-phase_07_data_integrity_security.md     → PII, encryption-at-rest, RLS, SQLi surface, GDPR
-phase_08_performance_scaling.md         → pooling, кэш, partitioning, репликация
-phase_09_observability_ops.md           → slow log, мониторинг, бэкапы, DR
-phase_10_synthesis_roadmap.md           → ROADMAP
-phase_10a_self_audit.md                 → МИНИ: рефлексия, adversary review
-phase_11_deep_dive.md                   → forensic-grade (обязателен при ≥ 1 critical)
+phase_00_setup                    → manifest+evidence sanity (фаза в основном уже сделана init.sh)
+phase_01_inventory                → extract_schema, extract_query_inventory, find_transactions
+phase_02_schema_design            → find_money_floats, find_naming_inconsistency, find_json_overuse,
+                                    find_status_without_check
+phase_03_indexes_keys             → find_missing_fk_indexes, find_index_recommendations
+phase_04_query_patterns           → find_n_plus_one, find_select_star, find_string_concat_sql
+phase_05_transactions_consistency → find_transactions, find_isolation_levels
+phase_05b_money_invariants        → find_money_floats (для money phase), find_no_idempotency,
+                                    find_atomic_updates
+phase_06_migrations_evolution     → find_migrations, find_dangerous_ddl, find_reversibility
+phase_07_data_integrity_security  → find_string_concat_sql (SQLi), find_pii_in_logs, find_secrets_in_repo
+phase_08_performance_scaling      → find_pool_settings, find_cache_strategy
+phase_09_observability_ops        → find_observability, find_backup_strategy
+phase_10_synthesis_roadmap        → synthesize_roadmap (генерирует skeleton, агент заполняет narrative)
+phase_10a_self_audit              → adversary_review
+phase_11_deep_dive                → deep_dive (только при ≥1 critical)
 ```
 
 ---
 
 ## 2. Контракт между фазами
 
-Каждая фаза:
-- читает артефакты предыдущих фаз;
-- выполняет проверки строго по своему чек-листу;
-- **запускает `scripts/validate_phase.sh NN`** — это hard gate, exit ≠ 0 = фаза не завершена;
-- записывает `audit/NN_<n>.md` — отчёт;
-- добавляет находки в `audit/findings.jsonl` (с обязательными полями);
-- наполняет `audit/evidence/NN_<n>/` минимум двумя файлами из обязательного списка (см. `scripts/required_evidence_files.sh NN`);
-- сохраняет состояние в `.serena/memories/db_audit_phase_NN`;
-- обновляет `.serena/memories/db_audit_progress`;
-- возвращает управление → сообщает пользователю статус → переходит к следующей.
+```
+1. run.sh phase NN  →
+2.   detector1.py --manifest --phase NN  → пишет findings.jsonl + evidence/NN_*/
+3.   detector2.py ...
+4.   ...
+5. validate_phase.sh NN  → exit 0 = фаза готова, иначе fix
+6. Агент пишет audit/NN_*.md report по prompts/phase_NN_*.md
+7. validate_phase.sh NN  → ещё раз с заполненным report
+8. → следующая фаза
+```
+
+Детекторы добавляют findings и evidence. **Агент дополняет отчётом фазы** (`audit/NN_<name>.md`) с narrative обзором (что проверено, что найдено сверх детекторов, ограничения).
 
 ---
 
 ## 3. Правила поведения агента
 
 ### 3.1. Read-only
-Никаких правок в коде проекта. **И — никаких записывающих SQL** в БД, даже в staging. Разрешены только `SELECT`, `EXPLAIN`, `EXPLAIN ANALYZE` (если включён read-only пользователь, у которого нет прав на write — это твоя главная страховка). Перед первым SQL подтверди, что подключение идёт под read-only ролью (`SELECT current_user, current_setting('default_transaction_read_only')` в Postgres).
+Никаких правок в коде проекта. И — никаких write-SQL. SELECT/EXPLAIN only. Перед первым live SQL подтверди read-only роль.
 
 ### 3.2. Evidence-based
-
-Каждое утверждение в отчёте — со ссылкой:
-- на файл+строки в коде/схеме/миграции;
-- или на конкретный фрагмент `EXPLAIN`;
-- или на строку `evidence/*.txt|json` из `run_external_tools.sh`.
-
-**Без цитаты конкретных строк/SQL утверждение не может попасть в отчёт.** «По всей видимости индекс отсутствует» — не finding. «`prisma/schema.prisma:42`, модель `Order`, поле `userId`, нет `@@index`» — finding.
+Каждое утверждение в отчёте — со ссылкой на:
+- `manifest.hints.X` (пред-найденное на discover)
+- evidence-файл из детектора
+- конкретные file:lines в коде
 
 ### 3.3. Калибровка confidence
 
-| Confidence | Условия — **все** должны быть выполнены |
-|------------|-----------------------------------------|
-| `high`     | (а) ты прочитал конкретные строки и цитируешь их в `evidence`; (б) проблема видна статически (схема/миграция/код), либо подтверждена EXPLAIN-ом; (в) нет правдоподобного объяснения, делающего это не проблемой; (г) **обязательно** заполнено `confidence_rationale` ≥ 40 символов и `location.lines` непустой. |
-| `medium`   | (а) ты видел паттерн; (б) но эффект зависит от рантайма/нагрузки/данных, которые ты не можешь подтвердить без EXPLAIN или statistics; (в) или ручная валидация сделана только для части случаев. |
-| `low`      | (а) срабатывание эвристики/grep; (б) ручная валидация не проводилась; (в) возможны false positives. |
+| Confidence | Условия |
+|------------|---------|
+| `high`     | Прочитал строки и цитируешь; статически видно либо EXPLAIN; нет правдоподобного объяснения; **`confidence_rationale` ≥ 40 символов**. |
+| `medium`   | Видел паттерн, но эффект зависит от данных/нагрузки; ручная валидация частична. |
+| `low`      | Грубая эвристика; ручная валидация не делалась. |
 
-**Запреты (нарушение = откат finding на ступень ниже):**
-
-- `severity: critical` без поля `exploit_proof` ≥ 40 символов с конкретным сценарием (data loss / double-spend / security breach / un-recoverable state).
-- `confidence: high` для performance findings, кроме трёх случаев:
-  1. **EXPLAIN подтвердил** seq scan / nested loop / sort (live-mode).
-  2. **N+1 виден статически** — ORM-вызов внутри for/while/.map с явной зависимостью от элемента.
-  3. **FK без индекса** виден прямо в схеме.
-- `confidence: high` для transaction-findings без чтения тела транзакции и явной демонстрации race-сценария.
-- `confidence: high` для security-findings без либо доказательства exploit-pathway, либо подтверждения по OWASP cheatsheet.
+**Запреты:**
+- `severity: critical` без `exploit_proof` ≥ 40 символов
+- `confidence: high` для performance — только если EXPLAIN, или N+1 виден статически, или FK без индекса прямо в схеме
+- `confidence: high` для transaction findings без чтения тела функции
 
 ### 3.4. Запрет «допустимо»
 
-В отчётах фаз **запрещены** формулировки: «допустимо», «приемлемо», «можно считать», «соответствует §X (даже если не соответствует)». Если правило нарушено — пиши явно: «нарушение, причина: …, действие: …». Скрипты ловят нарушения; не пытайся обойти словами.
+В отчётах фаз **запрещены** формулировки: «допустимо», «приемлемо», «можно считать допустимым», «не критично, оставим». Скрипты ловят, обходить словами нельзя.
 
-### 3.5. Экономия контекста
+### 3.5. Manifest is source of truth
 
-- Не читай файлы целиком, если хватит `get_symbols_overview` + точечного `find_symbol`.
-- Большие миграции — по диапазонам через `view_range`.
-- Перед чтением schema-файла > 500 строк — сначала `get_symbols_overview` либо `extract_schema_summary.sh` (он выдаст компактный список моделей).
-- **Но если фаза требует ручной проверки тела функции/транзакции/миграции — читай**. Экономия контекста не отменяет exit gate.
+Если ты обнаружил проблему, **которая не отражена в manifest** (например, новая money-колонка, которую ИИ пропустил на discover):
+1. Добавь её в `database-audit.manifest.yml` (это валидно — manifest можно править)
+2. Перезапусти `validate_manifest.py`
+3. Перезапусти соответствующий детектор: `bash database-audit/run.sh detector <name> <phase>`
+4. Зафиксируй обновление в `audit/00_setup.md` под секцией «Manifest amendments».
 
-### 3.6. Цитирование SQL
+### 3.6. Экономия контекста
+- Не читай файлы целиком — `get_symbols_overview` сначала
+- Большие файлы — диапазонами через `view_range`
 
-Все цитаты SQL — в `evidence/NN_*/snippets/` как отдельные файлы:
-```
-evidence/04_query_patterns/snippets/orders_list_n_plus_one.sql
-evidence/04_query_patterns/snippets/orders_list_n_plus_one.code.ts
-```
-Это нужно чтобы цитата проходила через `check_evidence_citations.py` и оставалась читаемой при просмотре отчёта.
+### 3.7. Цитирование
 
-### 3.7. Привязка к книге
-
-Каждая `recommendation` в finding содержит ссылку на источник. Минимум одна запись в `references` обязательна. Допустимые источники:
-- Книги из `REFERENCE_BOOKS.md` с указанием главы/параграфа.
-- Официальная документация СУБД (PostgreSQL, MySQL, MongoDB).
-- OWASP Cheatsheet (для security findings).
-- Документация ORM (Prisma docs, SQLAlchemy docs и т.д.).
-
-«Best practice» без источника — не источник. Если нечего сослаться — finding сомнителен, либо понизь confidence, либо найди ссылку.
+Цитаты SQL и code — в `audit/evidence/NN_*/snippets/`. Это нужно чтобы `check_evidence_citations.py` резолвил все ссылки.
 
 ### 3.8. Severity
 
-| Severity | Когда | Примеры |
-|----------|-------|---------|
-| `critical` | Data loss / double-spend / security breach / unrecoverable state. **Требует `exploit_proof`.** | Race в транзакции с деньгами без `SELECT FOR UPDATE`; миграция, которая удаляет колонку без backfill; SQL-инъекция через interpolation; PII в логах. |
-| `high` | Серьёзный performance / надёжность / compliance, но не катастрофа. | FK без индекса на таблице >1M строк; нет idempotency на critical endpoint; backup делается, но не проверяется. |
-| `medium` | Технический долг с реальным impact-ом, но без прямой угрозы. | N+1 на не-горячем пути; денормализация без причины; magic numbers в таймаутах. |
-| `low` | Стилистика, naming, мелкие неточности. | Mixed-case naming таблиц; `SELECT *` в запросах с малой выборкой. |
+| Severity | Когда |
+|----------|-------|
+| `critical` | Data loss / double-spend / breach / unrecoverable. **Требует `exploit_proof`.** |
+| `high` | Серьёзный perf/reliability/compliance |
+| `medium` | Тех.долг с реальным impact |
+| `low` | Стилистика, naming |
 
-### 3.9. Универсальность по стекам
+### 3.9. Anti-recursion
 
-Если стек редкий (например, Diesel + Postgres + Redis + кастомный graph-store) — **не пропускай фазу**, делай через bash + ручной обзор. Каждая фаза описывает универсальные принципы, которые применимы вне зависимости от ORM. Если конкретный детектор-скрипт стек не покрывает — фиксируй в `_known_unknowns.md`, делаешь обход вручную.
-
-### 3.10. Anti-recursion на инструментах
-
-После **3 пустых/одинаковых ответов** от инструмента (Serena, GitNexus, или live-DB) — переключаешься на fallback (см. §7). Не зацикливайся.
+После 3 пустых ответов от инструмента → fallback на bash + ripgrep. Не зацикливайся.
 
 ---
 
 ## 4. Hard exit gates
 
-После каждой фазы **обязательно**:
-
 ```bash
-bash database-audit/scripts/validate_phase.sh NN
+bash database-audit/validators/validate_phase.sh NN
 ```
 
-Скрипт проверяет:
-1. `audit/findings.jsonl` валидный JSON по строкам.
-2. Количество findings фазы ≥ scaled quota (см. таблицу ниже × масштабатор размера проекта из §6).
-3. Все `high` имеют `confidence_rationale` ≥ 40 символов и `location.lines` непустой.
-4. Все `critical` имеют `exploit_proof` ≥ 40 символов.
-5. В `audit/evidence/NN_*/` присутствуют все файлы из `required_evidence_files.sh NN`.
-6. В отчёте `audit/NN_*.md` нет «допустимо», «приемлемо» (стоп-слов).
-7. Каждая ссылка на файл:строки резолвится (`check_evidence_citations.py` — глобально на финале).
+Проверяет:
+1. `findings.jsonl` валидный JSON
+2. Findings count ≥ scaled quota (см. таблицу + размер из manifest.project.size)
+3. `confidence_rationale ≥ 40` для `high`
+4. `exploit_proof ≥ 40` для `critical`
+5. `location.lines` непустой для `high`
+6. Required evidence файлы из `lib/env.sh:phase_required_evidence` присутствуют
+7. Stop-words в отчёте отсутствуют
+8. Phase-specific (10 → ROADMAP.md, 10a → adversary_review, 11 → deep_dive с секцией на каждый critical)
 
-### Базовые квоты findings (M-проект, 10k–100k LOC)
+### Quotas (M-проект, базовые)
 
-| Phase | Min findings | Logic |
-|-------|--------------|-------|
-| 00 setup | 0 | подготовка |
-| 01 inventory | 0 | описательная |
-| 02 schema | 5 | даже у хорошего проекта найдётся 5 типизационных/naming/normalization шероховатостей |
-| 03 indexes | 3 | минимум один FK без индекса встречается почти всегда |
-| 04 queries | 5 | N+1, SELECT *, неоптимальный JOIN |
-| 05 transactions | 3 | хотя бы isolation level не задан явно |
-| 05b money | 2 если применимо, 0 если нет | пропуск только если в проекте нет денег/счётчиков (это решение фиксируется в `audit/01_*.md`) |
-| 06 migrations | 3 | irreversible / dangerous DDL почти всегда есть |
-| 07 security | 3 | encryption-at-rest, audit log, PII классификация |
-| 08 performance | 2 | pooling/кэш |
-| 09 ops | 2 | DR test почти никогда не проводился |
-| 10 synthesis | 0 | агрегирующая |
-| 10a self-audit | 0 | рефлексия |
-| 11 deep-dive | — | по необходимости |
+| Phase | Min |
+|-------|-----|
+| 02 | 5 |
+| 03 | 3 |
+| 04 | 5 |
+| 05 | 3 |
+| 06 | 3 |
+| 07 | 3 |
+| 08 | 2 |
+| 09 | 2 |
 
-Меньше квоты = `validate_phase.sh` падает. Если действительно проблем меньше — уменьшай scope проекта (через `audit_phase_00.md` → `size: XS/S`), масштабатор сам пересчитает.
+Scaling по `manifest.project.size`: XS÷3, S÷2, M=1, L×2, XL×3.
 
 ---
 
 ## 5. Порядок выполнения
 
-```
-1. phase_00_setup → создать audit/, проверить инструменты, run_external_tools.sh.
-2. phase_01_inventory → описать все БД, ORM, модели, миграции, raw SQL.
-3. phase_02_schema_design → дизайн схемы.
-4. phase_03_indexes_keys → ключи и индексы.
-5. phase_04_query_patterns → паттерны запросов (+ EXPLAIN если live-mode).
-6. phase_05_transactions_consistency → транзакции, isolation, race.
-7. phase_05b_money_invariants → ЕСЛИ применимо.
-8. phase_06_migrations_evolution → миграции.
-9. phase_07_data_integrity_security → безопасность данных.
-10. phase_08_performance_scaling → масштабирование.
-11. phase_09_observability_ops → ops.
-12. phase_10_synthesis_roadmap → ROADMAP черновик.
-13. phase_10a_self_audit → adversary review → возможен возврат к фазам.
-14. phase_11_deep_dive → если ≥ 1 critical.
-15. bash database-audit/scripts/finalize.sh → exit 0 = готово.
-16. Финальный tl;dr пользователю.
-```
+```bash
+# Простой путь:
+bash database-audit/run.sh all
+bash database-audit/validators/finalize.sh
 
-**Между фазами не импровизируй.** Если во время фазы N заметил находку для фазы M>N — запиши в `.serena/memories/db_audit_cross_phase_notes`, в фазе M проверь системно.
+# Или по фазам с проверкой каждой:
+for ph in 00 01 02 03 04 05 05b 06 07 08 09 10 10a 11; do
+  bash database-audit/run.sh phase $ph
+done
+bash database-audit/validators/finalize.sh
+```
 
 ---
 
 ## 6. Адаптация под размер проекта
 
-Размер БД считается отдельно от размера кода. В `phase_00_setup.md` фиксируешь оба, для квот используется **наибольший**.
+Размер фиксируется в `manifest.project.size`. Validators автоматически масштабируют quotas.
 
-| Размер | LOC кода | Моделей/таблиц | Корректировка квот |
-|--------|----------|----------------|-------------------|
-| XS | < 2k | < 5 | квоты ÷ 3 (мин. 1) |
-| S | 2k–10k | 5–15 | квоты ÷ 2 |
-| M | 10k–100k | 15–80 | квоты как в §4 |
-| L | 100k–1M | 80–300 | квоты × 2, семплируй топ-30 моделей |
-| XL | > 1M | > 300 | квоты × 3, разбей на подсхемы/bounded context |
-
-`validate_phase.sh` берёт размер из `.serena/memories/db_audit_phase_00`. Если файла нет — считает M.
+| Размер | LOC | Models |
+|--------|-----|--------|
+| XS | < 2k | < 5 |
+| S | 2k–10k | 5–15 |
+| M | 10k–100k | 15–80 |
+| L | 100k–1M | 80–300 |
+| XL | > 1M | > 300 |
 
 ---
 
 ## 7. Fallback-протоколы
 
-### 7.1. Serena недоступна
-**Признаки:** `activate_project` не работает, `find_symbol` пусто.
+### 7.1. Manifest повреждён / отсутствует
+Запусти `init.sh` (или `init.sh --refresh`). Не пытайся работать без manifest.
 
-**Протокол:**
-1. `get_current_config` — активен ли проект.
-2. Повтори `activate_project` с абсолютным путём.
-3. Если стабильно не работает — переключись на bash + ripgrep:
-   - `find_symbol` → `rg -n "function <name>|class <name>|def <name>"`
-   - `find_referencing_symbols` → `rg -n "<name>"` с фильтром по типу файлов
-   - `search_for_pattern` → `rg -E "<pattern>"`
-4. Зафиксируй в `audit/00_setup.md` ограничение.
-5. **Глубина анализа НЕ падает**, только скорость.
+### 7.2. Детектор упал
+1. Проверь exit code, прочитай stderr.
+2. Проверь корректность `manifest.hints.<group>` для этого детектора.
+3. Если детектор требует hint, который пуст — это **discover-промт пропустил**. Допиши вручную в manifest.
+4. Перезапусти детектор.
 
-### 7.2. GitNexus недоступен
-1. Прочитай `gitnexus://repo/{name}/schema` — могла измениться схема.
-2. Адаптируй cypher без сложных WHERE/JOIN.
-3. Если 3 попытки пустые — fallback на ручной импорт-граф через ripgrep.
+### 7.3. Live mode недоступен
+Зафиксируй в `audit/00_setup.md`: `mode: static`. Все findings, требующие EXPLAIN — `confidence ≤ medium`.
 
-### 7.3. Live-DB недоступна
-**Признаки:** `DATABASE_URL` не задан, или `psql --version` отсутствует, или connection rejected.
-
-**Протокол:**
-1. Зафиксируй в `audit/00_setup.md`: «mode = static-only».
-2. Все findings, требующие EXPLAIN, помечай `confidence: medium` максимум, добавляй пометку в `evidence`: «требует EXPLAIN ANALYZE для подтверждения».
-3. Перенеси задачу в `_known_unknowns.md`: «Phase 04 — top-10 query plans not verified live».
-4. **Не пропускай фазы**. Static-mode достаточно для 70% findings.
-
-### 7.4. ORM не детектируется автоматически
-1. Проверь `package.json`/`requirements.txt`/`go.mod`/`composer.json` вручную.
-2. Если стек кастомный (raw `pg.Pool`, raw `database/sql`) — фиксируй стек = `raw`, переходи к ручному обзору.
-3. Не считай отсутствие ORM проблемой само по себе.
-
-### 7.5. Миграции не находятся
-Возможные причины:
-- Миграции живут в отдельном репо.
-- Миграции применяются вручную через DBA.
-- Используется declarative-схема (Atlas, Skeema) без классических миграций.
-
-В каждом случае — спроси пользователя в `phase_00_setup.md`. Не выдумывай отсутствие миграций как finding.
+### 7.4. Serena недоступна
+Fallback на ripgrep + Read tool в Claude Code.
 
 ---
 
 ## 8. Live mode vs Static mode
 
-Пайплайн поддерживает два режима, оба полностью рабочие:
+В manifest:
+```yaml
+mode:
+  type: live | static
+  live_db_url_env: DATABASE_URL
+  read_only_role_required: true
+```
 
-### Static mode (по умолчанию)
-- Схема извлекается из манифестов ORM (`prisma/schema.prisma`, `models.py`, `*.entity.ts`).
-- Миграции — из директорий миграций.
-- Запросы — из исходного кода.
-- N+1 — эвристически (запрос внутри loop).
-- Индексы — задекларированные в схеме (не в реальной БД).
+**Live**: добавляются `EXPLAIN ANALYZE`, `pg_indexes`, `pg_stat_user_indexes`, `pg_stat_statements`. Только чтение системных таблиц.
 
-### Live mode (если задан `DATABASE_URL`)
-Дополнительно к static:
-- `EXPLAIN ANALYZE` на топ-N запросов из `extract_query_inventory.sh`.
-- Реальные индексы из `pg_indexes` / `INFORMATION_SCHEMA.STATISTICS`.
-- Статистика использования индексов из `pg_stat_user_indexes` (mark unused).
-- Slow query log из `pg_stat_statements` (если включён).
-- Размер таблиц — `pg_relation_size` / `INFORMATION_SCHEMA.TABLES`.
-
-**Live mode тебе ничего не разрешает писать в БД.** Только чтение системных таблиц и `EXPLAIN`. Перед первым live-вызовом подтверди read-only роль (см. §3.1).
+**Static**: только manifest + код. Помечай findings, требующие EXPLAIN, как `medium` confidence с пометкой в evidence.
 
 ---
 
-## 9. Структура артефактов на выходе
+## 9. Структура артефактов
 
 ```
 audit/
@@ -283,24 +213,22 @@ audit/
 ├── 03_indexes_keys.md
 ├── 04_query_patterns.md
 ├── 05_transactions_consistency.md
-├── 05b_money_invariants.md      ← мини, опционально
+├── 05b_money_invariants.md
 ├── 06_migrations_evolution.md
 ├── 07_data_integrity_security.md
 ├── 08_performance_scaling.md
 ├── 09_observability_ops.md
 ├── 10_synthesis.md
-├── 10a_self_audit.md            ← обязательный
-├── 11_deep_dive.md              ← обязательный при ≥ 1 critical
-├── ROADMAP.md                   ← ГЛАВНЫЙ РЕЗУЛЬТАТ
+├── 10a_self_audit.md
+├── 11_deep_dive.md         ← обязателен при ≥1 critical
+├── ROADMAP.md              ← главный артефакт
 ├── findings.jsonl
-├── _meta.json                   ← генерируется finalize.sh
-├── _known_unknowns.md           ← Phase 10a
-├── _adversary_review.md         ← Phase 10a
+├── _meta.json              ← finalize.sh
+├── _known_unknowns.md
+├── _adversary_review.md
 └── evidence/
-    ├── 01_inventory/
-    ├── 02_schema_design/
-    ├── 03_indexes_keys/
-    ├── 04_query_patterns/
+    ├── 01_inventory/schema_summary.json
+    ├── 02_schema_design/money_floats.md
     └── ...
 ```
 
@@ -308,24 +236,22 @@ audit/
 
 ## 10. Возобновление сессии
 
-1. Прочитай `.serena/memories/db_audit_progress`.
-2. Прочитай `.serena/memories/db_audit_phase_XX` для последней завершённой фазы.
-3. Прочитай `audit/findings.jsonl` и `audit/_meta.json` (если есть).
-4. Запусти `bash database-audit/scripts/validate_phase.sh XX` — убедись, что предыдущая фаза прошла gate.
-5. Если не прошла — допили её. Если прошла — следующая.
+1. Прочитай `database-audit.manifest.yml` — чтобы знать стек.
+2. Прочитай `audit/_meta.json` если есть — статус прогресса.
+3. Найди последнюю завершённую фазу (`audit/NN_*.md`).
+4. Запусти `validate_phase.sh` на ней.
+5. Если ok — следующая фаза. Если fail — допили текущую.
 
 ---
 
 ## 11. Финальные обязательства
 
-Пайплайн считается завершённым только если **`bash database-audit/scripts/finalize.sh` возвращает 0**. Скрипт проверяет:
+`bash database-audit/validators/finalize.sh` exit 0:
+- все `validate_phase.sh NN` для каждой созданной фазы
+- `validate_confidence.py` глобально
+- `check_evidence_citations.py` (все file:lines резолвятся)
+- `audit/ROADMAP.md`, `_known_unknowns.md`, `_adversary_review.md`, `10a_*.md` присутствуют
+- если есть critical — `audit/11_deep_dive.md` присутствует с секцией на каждый
+- `_meta.json` сгенерирован, `verdict: pass | pass-with-conditions | fail`
 
-- все `validate_phase.sh NN` для каждой созданной фазы;
-- `validate_confidence.py` (глобальное распределение confidence-уровней vs severity);
-- `check_evidence_citations.py` (все цитаты резолвятся);
-- `audit/ROADMAP.md`, `audit/_known_unknowns.md`, `audit/_adversary_review.md`, `audit/10a_*.md` присутствуют;
-- если есть critical findings — `audit/11_*.md` присутствует;
-- `audit/_meta.json` сгенерирован, `verdict: pass`;
-- пользователю отдан финальный tl;dr.
-
-Теперь перейди к `REFERENCE_TOOLS.md`.
+Только при exit 0 — пиши пользователю tl;dr.

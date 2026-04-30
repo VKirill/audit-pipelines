@@ -149,3 +149,18 @@ Required evidence:
 
 - `audit/04_query_patterns.md`
 - evidence файлы выше + `snippets/` с цитатами SQL/code
+
+---
+
+## v2: Manifest workflow
+
+**Какие manifest-секции читает эта фаза:** `hints.n_plus_one_candidates`, `paths.query_files`
+
+**Запуск:**
+```bash
+bash database-audit/run.sh phase 04
+```
+
+После детекторов агент дополняет `audit/04_*.md` отчёт фазы согласно структуре в `TEMPLATES.md §2` (секции: Что проверено / Сводка / Findings / Ограничения / Артефакты).
+
+Если детектор не нашёл ожидаемых hints в manifest — это сигнал что **discover упустил**, надо допилить manifest и перезапустить детектор.

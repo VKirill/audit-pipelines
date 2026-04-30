@@ -102,3 +102,18 @@ bash database-audit/scripts/validate_phase.sh 10a
 
 - Если ≥ 1 critical → phase_11_deep_dive **обязателен**.
 - Если только high и ниже → можно сразу `finalize.sh`.
+
+---
+
+## v2: Manifest workflow
+
+**Какие manifest-секции читает эта фаза:** findings.jsonl + manifest для adversary review
+
+**Запуск:**
+```bash
+bash database-audit/run.sh phase 10a
+```
+
+После детекторов агент дополняет `audit/10a_*.md` отчёт фазы согласно структуре в `TEMPLATES.md §2` (секции: Что проверено / Сводка / Findings / Ограничения / Артефакты).
+
+Если детектор не нашёл ожидаемых hints в manifest — это сигнал что **discover упустил**, надо допилить manifest и перезапустить детектор.

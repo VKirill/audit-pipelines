@@ -143,3 +143,18 @@ Required evidence:
 ## 5. Артефакты
 
 - `audit/08_performance_scaling.md`
+
+---
+
+## v2: Manifest workflow
+
+**Какие manifest-секции читает эта фаза:** `hints.pool_settings`, `paths.pool_config_files`
+
+**Запуск:**
+```bash
+bash database-audit/run.sh phase 08
+```
+
+После детекторов агент дополняет `audit/08_*.md` отчёт фазы согласно структуре в `TEMPLATES.md §2` (секции: Что проверено / Сводка / Findings / Ограничения / Артефакты).
+
+Если детектор не нашёл ожидаемых hints в manifest — это сигнал что **discover упустил**, надо допилить manifest и перезапустить детектор.

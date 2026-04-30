@@ -123,3 +123,18 @@ Required evidence:
 
 - `audit/02_schema_design.md`
 - evidence файлы выше
+
+---
+
+## v2: Manifest workflow
+
+**Какие manifest-секции читает эта фаза:** `hints.money_columns` (для money_floats), `hints.json_overuse`, evidence/01/schema_summary.json
+
+**Запуск:**
+```bash
+bash database-audit/run.sh phase 02
+```
+
+После детекторов агент дополняет `audit/02_*.md` отчёт фазы согласно структуре в `TEMPLATES.md §2` (секции: Что проверено / Сводка / Findings / Ограничения / Артефакты).
+
+Если детектор не нашёл ожидаемых hints в manifest — это сигнал что **discover упустил**, надо допилить manifest и перезапустить детектор.

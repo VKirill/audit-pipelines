@@ -166,3 +166,18 @@ Required evidence:
 ## 5. Артефакты
 
 - `audit/07_data_integrity_security.md`
+
+---
+
+## v2: Manifest workflow
+
+**Какие manifest-секции читает эта фаза:** `hints.pii_candidates`, `hints.raw_sql_in_code`
+
+**Запуск:**
+```bash
+bash database-audit/run.sh phase 07
+```
+
+После детекторов агент дополняет `audit/07_*.md` отчёт фазы согласно структуре в `TEMPLATES.md §2` (секции: Что проверено / Сводка / Findings / Ограничения / Артефакты).
+
+Если детектор не нашёл ожидаемых hints в manifest — это сигнал что **discover упустил**, надо допилить manifest и перезапустить детектор.

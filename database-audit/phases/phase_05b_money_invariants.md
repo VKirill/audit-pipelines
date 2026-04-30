@@ -126,3 +126,18 @@ Required evidence:
 ## 8. Связь с phase 11
 
 Если в этой фазе есть ≥ 1 critical finding — phase 11 deep-dive обязателен и должен **в первую очередь** разобрать денежные сценарии полностью (включая трассировку всех endpoint, ходящих в balance/amount).
+
+---
+
+## v2: Manifest workflow
+
+**Какие manifest-секции читает эта фаза:** `hints.money_columns` (для money_floats), `hints.money_endpoints` (для no_idempotency)
+
+**Запуск:**
+```bash
+bash database-audit/run.sh phase 05b
+```
+
+После детекторов агент дополняет `audit/05b_*.md` отчёт фазы согласно структуре в `TEMPLATES.md §2` (секции: Что проверено / Сводка / Findings / Ограничения / Артефакты).
+
+Если детектор не нашёл ожидаемых hints в manifest — это сигнал что **discover упустил**, надо допилить manifest и перезапустить детектор.

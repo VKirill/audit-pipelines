@@ -129,3 +129,18 @@ bash database-audit/scripts/validate_phase.sh 00
 - Не делаешь EXPLAIN — это phase 04.
 
 Фаза 00 = только описание ландшафта.
+
+---
+
+## v2: Manifest workflow
+
+**Какие manifest-секции читает эта фаза:** (нет — этап делает init.sh)
+
+**Запуск:**
+```bash
+bash database-audit/run.sh phase 00
+```
+
+После детекторов агент дополняет `audit/00_*.md` отчёт фазы согласно структуре в `TEMPLATES.md §2` (секции: Что проверено / Сводка / Findings / Ограничения / Артефакты).
+
+Если детектор не нашёл ожидаемых hints в manifest — это сигнал что **discover упустил**, надо допилить manifest и перезапустить детектор.

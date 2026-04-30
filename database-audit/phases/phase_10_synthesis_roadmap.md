@@ -105,3 +105,18 @@ bash database-audit/scripts/validate_phase.sh 10
 - `audit/ROADMAP.md` — главный артефакт.
 
 После этой фазы → **обязательно** `phase_10a_self_audit.md`.
+
+---
+
+## v2: Manifest workflow
+
+**Какие manifest-секции читает эта фаза:** findings.jsonl + все предыдущие отчёты
+
+**Запуск:**
+```bash
+bash database-audit/run.sh phase 10
+```
+
+После детекторов агент дополняет `audit/10_*.md` отчёт фазы согласно структуре в `TEMPLATES.md §2` (секции: Что проверено / Сводка / Findings / Ограничения / Артефакты).
+
+Если детектор не нашёл ожидаемых hints в manifest — это сигнал что **discover упустил**, надо допилить manifest и перезапустить детектор.

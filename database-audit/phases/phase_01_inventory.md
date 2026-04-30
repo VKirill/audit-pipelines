@@ -131,3 +131,18 @@ bash database-audit/scripts/validate_phase.sh 01
 - `audit/evidence/01_inventory/queries_inventory.md`
 - `audit/evidence/01_inventory/transactions_list.md`
 - `audit/evidence/01_inventory/config_summary.md`
+
+---
+
+## v2: Manifest workflow
+
+**Какие manifest-секции читает эта фаза:** `stack`, `paths.schema_files`, `paths.migration_files`, `paths.query_files`
+
+**Запуск:**
+```bash
+bash database-audit/run.sh phase 01
+```
+
+После детекторов агент дополняет `audit/01_*.md` отчёт фазы согласно структуре в `TEMPLATES.md §2` (секции: Что проверено / Сводка / Findings / Ограничения / Артефакты).
+
+Если детектор не нашёл ожидаемых hints в manifest — это сигнал что **discover упустил**, надо допилить manifest и перезапустить детектор.

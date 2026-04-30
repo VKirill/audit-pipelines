@@ -1,0 +1,349 @@
+# JSON Schema for database-audit.manifest.yml (v2).
+# Validated by validators/validate_manifest.py before each pipeline run.
+# Format: JSON Schema draft-07 (in YAML for readability).
+
+$schema: "http://json-schema.org/draft-07/schema#"
+title: Database Audit Manifest
+type: object
+required: [version, generated_at, project, stack, paths, mode, phase_plan]
+additionalProperties: false
+
+properties:
+  version:
+    type: string
+    enum: ["1.0"]
+
+  generated_at:
+    type: string
+    description: ISO 8601 timestamp of init.sh run
+
+  generated_by:
+    type: string
+    description: Model name that produced this manifest
+
+  audit_dir:
+    type: string
+    default: "audit"
+    description: Output directory for audit artefacts (relative to project root)
+
+  project:
+    type: object
+    required: [root, name, type, size]
+    additionalProperties: false
+    properties:
+      root: { type: string, description: Absolute path to project root }
+      name: { type: string }
+      type:
+        type: string
+        enum: [single, monorepo, polyrepo-link]
+      workspaces:
+        type: array
+        items: { type: string }
+        description: For monorepo — list of workspace paths
+      size:
+        type: string
+        enum: [XS, S, M, L, XL]
+        description: Largest of (LOC class, models class)
+      loc: { type: integer }
+      models_count: { type: integer }
+      migrations_count: { type: integer }
+      git_head: { type: string }
+      git_branch: { type: string }
+
+  stack:
+    type: object
+    required: [primary_db, primary_orm]
+    additionalProperties: false
+    properties:
+      primary_db:
+        type: string
+        enum: [postgresql, mysql, mariadb, sqlite, mongodb, redis, clickhouse, cassandra, dynamodb, unknown]
+      also_used_dbs:
+        type: array
+        items: { type: string }
+      primary_orm:
+        type: string
+        enum:
+          - prisma
+          - drizzle
+          - typeorm
+          - sequelize
+          - mongoose
+          - knex
+          - kysely
+          - mikro-orm
+          - pg-raw
+          - mysql2-raw
+          - sqlalchemy
+          - django-orm
+          - tortoise
+          - peewee
+          - psycopg-raw
+          - pymongo
+          - gorm
+          - sqlx
+          - sqlc
+          - bun
+          - ent
+          - go-sql-raw
+          - doctrine
+          - eloquent
+          - activerecord
+          - sequel
+          - hibernate
+          - spring-data-jpa
+          - jooq
+          - mybatis
+          - diesel
+          - sqlx-rust
+          - sea-orm
+          - raw
+          - unknown
+      also_used_orms:
+        type: array
+        items: { type: string }
+      orm_versions:
+        type: object
+        additionalProperties: { type: string }
+
+  paths:
+    type: object
+    required: [schema_files, query_files]
+    additionalProperties: false
+    properties:
+      schema_files:
+        type: array
+        items: { type: string }
+        minItems: 0
+        description: Explicit list of schema/model files
+      migration_files:
+        type: object
+        properties:
+          dirs:
+            type: array
+            items: { type: string }
+          files:
+            type: array
+            items: { type: string }
+            description: Explicit list takes priority over dirs
+          tool:
+            type: string
+            enum: [prisma-migrate, drizzle-kit, typeorm-cli, sequelize-cli, knex, alembic, django-migrations, flyway, liquibase, atlas, skeema, golang-migrate, phinx, doctrine-migrations, activerecord-migrations, diesel-cli, raw-sql-by-date, declarative, none, unknown]
+      pool_config_files:
+        type: array
+        items: { type: string }
+        description: Files configuring DB connection pool
+      query_files:
+        type: object
+        additionalProperties: false
+        properties:
+          code_globs:
+            type: array
+            items: { type: string }
+          raw_sql_globs:
+            type: array
+            items: { type: string }
+          excludes:
+            type: array
+            items: { type: string }
+            default: [node_modules, .git, dist, build, vendor, .venv, .next]
+      seed_files:
+        type: array
+        items: { type: string }
+      orm_config_files:
+        type: array
+        items: { type: string }
+        description: prisma.schema main entry, sequelize config etc.
+      env_files:
+        type: array
+        items: { type: string }
+        description: .env / .env.example files (for DSN detection)
+
+  hints:
+    type: object
+    description: Pre-discovered facts that detectors will use directly. Filled by init's AI sweep.
+    additionalProperties: false
+    properties:
+      money_columns:
+        type: array
+        items:
+          type: object
+          required: [table, file, lines, columns, type]
+          properties:
+            table: { type: string }
+            file: { type: string }
+            lines: { type: string, pattern: "^[0-9]+(-[0-9]+)?$" }
+            symbol: { type: string }
+            columns:
+              type: array
+              items: { type: string }
+            type: { type: string, description: "DB-level type as declared (e.g. Float, DECIMAL(10,2), Numeric)" }
+            currency_hint: { type: string }
+            classification: { type: string, enum: [balance, price, fee, payout, exchange-rate, quantity, other] }
+      transaction_sites:
+        type: array
+        items:
+          type: object
+          required: [file, lines, kind]
+          properties:
+            file: { type: string }
+            lines: { type: string }
+            symbol: { type: string }
+            kind:
+              type: string
+              enum:
+                - explicit-transaction
+                - missing-transaction
+                - external-io-inside-transaction
+                - implicit-via-orm-batch
+                - row-lock-for-update
+                - optimistic-version
+            isolation: { type: string }
+            note: { type: string }
+      raw_sql_in_code:
+        type: array
+        items:
+          type: object
+          required: [file, lines, kind]
+          properties:
+            file: { type: string }
+            lines: { type: string }
+            kind:
+              type: string
+              enum:
+                - prisma.$queryRaw
+                - prisma.$executeRaw
+                - sqlalchemy-text
+                - django-raw
+                - knex-raw
+                - typeorm-query
+                - mongoose-aggregate
+                - other
+            uses_user_input:
+              type: boolean
+              description: Heuristic flag for SQLi review priority
+      pii_candidates:
+        type: array
+        items:
+          type: object
+          required: [table, column, file, lines, classification]
+          properties:
+            table: { type: string }
+            column: { type: string }
+            file: { type: string }
+            lines: { type: string }
+            type: { type: string }
+            classification:
+              type: string
+              enum: [sensitive, non-sensitive, special-category, payment-card, biometric, credentials]
+            encrypted_at_rest: { type: boolean }
+      money_endpoints:
+        type: array
+        description: Routes / handlers that mutate money state — for money invariants
+        items:
+          type: object
+          required: [file, lines]
+          properties:
+            file: { type: string }
+            lines: { type: string }
+            symbol: { type: string }
+            route: { type: string }
+            mutation_kind:
+              type: string
+              enum: [debit, credit, transfer, charge, refund, mixed]
+            has_idempotency_key: { type: boolean }
+      pool_settings:
+        type: object
+        properties:
+          file: { type: string }
+          lines: { type: string }
+          max_connections: { type: integer }
+          idle_timeout_ms: { type: integer }
+          shared_across_processes: { type: integer }
+          notes: { type: string }
+      n_plus_one_candidates:
+        type: array
+        description: Pre-validated suspects from init scan. Detectors expand and confirm.
+        items:
+          type: object
+          required: [file, lines]
+          properties:
+            file: { type: string }
+            lines: { type: string }
+            inside_loop: { type: boolean }
+            symbol: { type: string }
+      missing_fk_indexes:
+        type: array
+        items:
+          type: object
+          required: [table, column, file, lines]
+          properties:
+            table: { type: string }
+            column: { type: string }
+            file: { type: string }
+            lines: { type: string }
+            referenced_table: { type: string }
+      dangerous_migrations:
+        type: array
+        items:
+          type: object
+          required: [file, lines, kind]
+          properties:
+            file: { type: string }
+            lines: { type: string }
+            kind:
+              type: string
+              enum:
+                - drop-table
+                - drop-column
+                - rename-column
+                - alter-column-type
+                - add-not-null-default
+                - create-index-blocking
+                - add-constraint-validating
+                - truncate
+                - update-without-where
+                - large-tx-wrap
+
+  mode:
+    type: object
+    required: [type]
+    additionalProperties: false
+    properties:
+      type: { type: string, enum: [static, live] }
+      live_db_url_env:
+        type: string
+        description: Name of environment variable carrying DSN (NEVER stores the value here)
+      read_only_role_required:
+        type: boolean
+        default: true
+
+  phase_plan:
+    type: object
+    description: Map of phase id -> detector list and per-phase config.
+    additionalProperties:
+      type: object
+      properties:
+        detectors:
+          type: array
+          items: { type: string }
+        skip_reason:
+          type: string
+          description: If non-empty, phase is skipped and validate_phase.sh records it
+        inputs:
+          type: object
+          description: Free-form inputs passed to detectors
+        notes:
+          type: string
+
+  thresholds:
+    type: object
+    additionalProperties: false
+    description: Override default quotas / scoring per project.
+    properties:
+      min_findings_overrides:
+        type: object
+        additionalProperties: { type: integer }
+      stop_words_extra:
+        type: array
+        items: { type: string }
