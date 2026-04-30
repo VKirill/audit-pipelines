@@ -180,6 +180,59 @@ v4: ожидается ~80 findings:
 
 ---
 
+
+### v5.1 — closing nice-to-have backlog (2026-05-01)
+
+Все 4 отложенных пункта v5 реализованы:
+
+#### #5 — FK index priority by table size
+`find_missing_fk_indexes.py` v5: cross-references `evidence/live/top_tables_size.txt`
+для калибровки severity:
+- >1M rows → critical (с exploit_proof)
+- 100k-1M → high
+- 10k-100k → medium
+- <10k → low
+
+В static-mode (без live evidence) — default `high` + `confidence: medium`.
+
+#### #8 — verify_fix.md prompt
+`prompts/verify_fix.md` — re-checking applied fixes для конкретных finding IDs.
+- Snapshots previous run as `findings.previous.jsonl`
+- Re-runs targeted detector logic per finding subcategory
+- Live invariant re-verification (drift queries, etc.)
+- Generates `verify_report.md` with: fixed / partial / still-open / regressed
+- Updates `_meta.json` с `verify` секцией
+
+Использование:
+```
+PROJECT_PATH=... FINDING_IDS=DB-TX-005,DB-MONEY-012 mode=live
+```
+
+#### #9 — ROADMAP time-budget mode
+`synthesize_roadmap.py` v5.1 добавляет 3 новые секции в ROADMAP.md:
+- ⚡ Quick wins (S effort) — топ-10 high-impact findings что закрываются за часы
+- 📅 Sprint plan (M effort) — недельный план
+- 🎯 Quarter goals (L+ effort) — архитектурные изменения
+- Effort budget estimate в engineer-hours (S=2h, M=12h, L=40h, XL=160h)
+
+#### #10 — Multi-project comparison
+`validators/compare_projects.py` + `run.sh compare`:
+- Severity matrix через все проекты
+- Category matrix (heat-map style)
+- Common subcategories (что есть в >1 проекте — паттерн команды)
+- Unique findings (что есть только в одном — точечная проблема)
+- Worst offenders ranking (4×critical + high score)
+- Cross-project critical money/security findings list
+
+Использование:
+```bash
+bash database-audit/run.sh compare /path/to/proj-a /path/to/proj-b /path/to/proj-c
+# или с output:
+python3 database-audit/validators/compare_projects.py /path/a /path/b -o report.md
+```
+
+---
+
 ## v5 (2026-05-01) — Autonomous master prompt + retroactive fixes
 
 После live-mode прогона на vechkasov v4: 161 findings (включая `DB-LIVE-001` — реальная утечка денег в проде SKUDOV.NET / abiteq), 33 critical, mode=live с 8 evidence файлами. Ретроспектива выявила 7 точек улучшения.

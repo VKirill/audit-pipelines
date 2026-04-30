@@ -138,6 +138,11 @@ case "$cmd" in
     require_manifest
     bash "$SCRIPT_DIR/validators/finalize.sh"
     ;;
+  compare)
+    [[ -n "${2:-}" ]] || { echo "Usage: run.sh compare <project-a> <project-b> [<project-c> ...]"; exit 2; }
+    shift  # drop 'compare'
+    python3 "$SCRIPT_DIR/validators/compare_projects.py" "$@"
+    ;;
   reset)
     require_manifest 2>/dev/null || true
     echo "==> Removing manifest, _staging/, results/ — pipeline code preserved"
@@ -157,6 +162,7 @@ Usage:
   bash database-audit/run.sh preflight
   bash database-audit/run.sh finalize
   bash database-audit/run.sh reset       # wipe runtime, keep pipeline code
+  bash database-audit/run.sh compare <p1> <p2> [<p3>...]  # multi-project diff
 
 Run init.sh first:
   bash database-audit/init.sh

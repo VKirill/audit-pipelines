@@ -162,6 +162,48 @@ def main():
                    f'{cs.get("medium", 0)} | {cs.get("low", 0)} |')
 
     out.append('')
+    out.append('## ⚡ Quick wins (S effort)')
+    out.append('')
+    out.append('Что можно сделать за 1-2 часа суммарно — максимальный impact на минимальном effort.')
+    out.append('')
+    quick_wins = [f for f in findings if f.get('effort') == 'S' and f.get('severity') in ('critical', 'high')]
+    if quick_wins:
+        for f in quick_wins[:10]:
+            loc = f.get('location', {})
+            out.append(f'- **{f["id"]}** [{f.get("severity")}] — {f.get("title", "?")}')
+            out.append(f'  `{loc.get("file","?")}:{loc.get("lines","?")}` · effort S · ' + (f.get('recommendation','')[:120]))
+    else:
+        out.append('_No S-effort high-impact findings — все требуют M+ effort._')
+    out.append('')
+
+    out.append('## 📅 Sprint plan (M effort, 1-2 days each)')
+    out.append('')
+    sprint = [f for f in findings if f.get('effort') == 'M' and f.get('severity') in ('critical', 'high')]
+    if sprint:
+        for f in sprint[:10]:
+            loc = f.get('location', {})
+            out.append(f'- **{f["id"]}** [{f.get("severity")}] — {f.get("title", "?")} · `{loc.get("file","?")}:{loc.get("lines","?")}`')
+    else:
+        out.append('_None at M-effort._')
+    out.append('')
+
+    out.append('## 🎯 Quarter goals (L+ effort)')
+    out.append('')
+    quarter = [f for f in findings if f.get('effort') in ('L', 'XL')]
+    if quarter:
+        for f in quarter[:10]:
+            out.append(f'- **{f["id"]}** [{f.get("severity")}] — {f.get("title", "?")} · effort {f.get("effort")}')
+    else:
+        out.append('_None at L/XL effort._')
+    out.append('')
+
+    # Effort distribution summary
+    from collections import Counter
+    effort_counts = Counter(f.get('effort', 'unknown') for f in findings)
+    total_effort_hours = effort_counts.get('S', 0) * 2 + effort_counts.get('M', 0) * 12 + effort_counts.get('L', 0) * 40 + effort_counts.get('XL', 0) * 160
+    out.append(f'**Effort budget estimate:** S×{effort_counts.get("S",0)} (~2h each) + M×{effort_counts.get("M",0)} (~1-2 days) + L×{effort_counts.get("L",0)} (~1 week) + XL×{effort_counts.get("XL",0)} (~1 month)')
+    out.append(f'**Rough total:** ~{total_effort_hours} engineer-hours')
+    out.append('')
     out.append('## Источники')
     out.append('')
     refs = set()
