@@ -58,11 +58,11 @@
 
 ---
 
-## Три пайплайна — выбери свой
+## Четыре пайплайна — выбери свой
 
 <table>
 <tr>
-<td width="33%" valign="top">
+<td width="50%" valign="top">
 
 ### 🎨 [`frontend/`](./frontend)
 
@@ -82,7 +82,7 @@
 [Запустить →](./frontend)
 
 </td>
-<td width="33%" valign="top">
+<td width="50%" valign="top">
 
 ### 🛡️ [`codebase/`](./codebase)
 
@@ -102,7 +102,9 @@
 [Запустить →](./codebase)
 
 </td>
-<td width="33%" valign="top">
+</tr>
+<tr>
+<td width="50%" valign="top">
 
 ### 🔒 [`ci-hardening/`](./ci-hardening)
 
@@ -122,6 +124,26 @@
 [Запустить →](./ci-hardening)
 
 </td>
+<td width="50%" valign="top">
+
+### 🗄️ [`database-audit/`](./database-audit)
+
+**Глубокий аудит БД и моделей**
+
+11 фаз + 2 мини, ~60-240 минут.
+
+- Schema design (Date, Karwin, Celko)
+- Indexes (Winand, Schwartz)
+- N+1, EXPLAIN, query patterns
+- Transactions, money & state invariants
+- Migrations zero-downtime (Sadalage)
+- PII, encryption, GDPR, ops
+
+**Для:** проектов с БД (Postgres, MySQL, Mongo, ...). Любая ORM. Static + опц. live mode с `DATABASE_URL`.
+
+[Запустить →](./database-audit)
+
+</td>
 </tr>
 </table>
 
@@ -131,6 +153,7 @@
 flowchart TD
     A[У тебя проект] --> Z{Что болит<br/>сильнее всего?}
     Z -- «CI красный или его нет,<br/>боюсь supply-chain» --> H[ci-hardening/]
+    Z -- «Тормозит, теряет данные,<br/>боюсь миграций» --> DB[database-audit/]
     Z -- «Хочу понять что в коде» --> B{Это React или<br/>Next.js сайт?}
     B -- Да, чистый фронт --> C[frontend/]
     B -- Есть бэкенд / API --> D[codebase/]
@@ -143,15 +166,16 @@ flowchart TD
     style C fill:#fde7c8,stroke:#d97757,color:#000
     style D fill:#d4e6f1,stroke:#2c3e50,color:#000
     style H fill:#f5d5d5,stroke:#c0392b,color:#000
+    style DB fill:#d5f5e3,stroke:#27ae60,color:#000
 ```
 
-> Пайплайны не взаимоисключают друг друга. Хорошая последовательность: `codebase` или `frontend` → правки по roadmap → `ci-hardening` чтобы зашить найденное в CI и не получить регресс.
+> Пайплайны не взаимоисключают друг друга. Хорошая последовательность: `codebase` или `frontend` → правки по roadmap → `database-audit` если есть БД → `ci-hardening` чтобы зашить найденное в CI.
 
 ---
 
 ## Что получишь на выходе
 
-Главный артефакт всех трёх пайплайнов — **ROADMAP** (у `ci-hardening` дополнительно — готовый `ci.yml` под проект). Это не «80 страниц красивых слов», а конкретный список:
+Главный артефакт всех четырёх пайплайнов — **ROADMAP**. У `ci-hardening` дополнительно — готовый `ci.yml`. У `database-audit` — машинная сводка `_meta.json` и `_known_unknowns.md` (что осталось проверить). Это не «80 страниц красивых слов», а конкретный список:
 
 ```
 🔴 Сейчас (Now):
@@ -233,11 +257,11 @@ flowchart TD
 </tr>
 </table>
 
-Команды установки — в README конкретного пайплайна. **Для `ci-hardening`** хватает только Claude Code (или любого AI-ассистента с доступом к файлам репо) — Serena и GitNexus не нужны.
+Команды установки — в README конкретного пайплайна. **Для `ci-hardening`** хватает только Claude Code. Для `database-audit` опционально — `psql`/`mysql`/`mongosh` для live-mode.
 
 ---
 
-## Принципы, которые зашиты во все три пайплайна
+## Принципы, которые зашиты во все четыре пайплайна
 
 <table>
 <tr><td><b>📂 Read-only</b></td><td>Пайплайн ничего не меняет в коде. Только смотрит и пишет отчёт.</td></tr>
@@ -270,6 +294,16 @@ flowchart TD
 - Martin Kleppmann — *Designing Data-Intensive Applications*
 - Pat Helland — *Life Beyond Distributed Transactions*
 - Google — *SRE Book*
+
+**Базы данных и схемы**
+- C.J. Date — *Database Design and Relational Theory*
+- Bill Karwin — *SQL Antipatterns*
+- Markus Winand — *Use the Index, Luke* / *SQL Performance Explained*
+- Joe Celko — *SQL for Smarties* / *SQL Programming Style*
+- Schwartz et al. — *High Performance MySQL*; Greg Smith — *PostgreSQL High Performance*
+- Sadalage & Ambler — *Refactoring Databases*
+- Vlad Mihalcea — *High Performance Java Persistence*
+- Bernstein & Newcomer — *Principles of Transaction Processing*
 
 </td>
 <td valign="top" width="50%">
