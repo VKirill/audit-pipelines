@@ -155,6 +155,33 @@ if [[ "$PHASE" == "11" ]]; then
       errors=$((errors+1))
     fi
   done < <(jq -r 'select(.severity == "critical") | .id' "$FINDINGS" 2>/dev/null)
+  # v4: section 4 (Fix variants) must NOT contain "_agent fills_" if any critical exists
+  if [[ -f "$AUDIT_DIR/11_deep_dive.md" ]]; then
+    if grep -q "Variant A (quick.*)\?:.*_agent fills_" "$AUDIT_DIR/11_deep_dive.md" 2>/dev/null; then
+      c_red "11_deep_dive.md still has _agent fills_ placeholders in Fix variants — agent must complete"
+      errors=$((errors+1))
+    fi
+    # section 5 (Test strategy)
+    if grep -qE "^_agent fills:" "$AUDIT_DIR/11_deep_dive.md" 2>/dev/null; then
+      c_red "11_deep_dive.md has unfilled sections — agent must complete"
+      errors=$((errors+1))
+    fi
+  fi
+fi
+
+# v4: phase 10a — _adversary_review.md must NOT be empty/template
+if [[ "$PHASE" == "10a" ]]; then
+  if [[ -f "$AUDIT_DIR/_adversary_review.md" ]]; then
+    size=$(wc -c < "$AUDIT_DIR/_adversary_review.md")
+    if (( size < 500 )); then
+      c_red "_adversary_review.md too small ($size bytes) — looks like template"
+      errors=$((errors+1))
+    fi
+    if grep -q "_To be filled by agent_" "$AUDIT_DIR/_adversary_review.md" 2>/dev/null; then
+      c_red "_adversary_review.md still has placeholder text — agent must enrich"
+      errors=$((errors+1))
+    fi
+  fi
 fi
 
 if (( errors > 0 )); then

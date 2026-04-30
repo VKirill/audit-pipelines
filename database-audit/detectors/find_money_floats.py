@@ -48,7 +48,14 @@ def main():
     for h in hits:
         cols = ', '.join(h.get('columns', []))
         is_balance_or_payout = h.get('classification') in ('balance', 'payout')
-        severity = 'critical' if is_balance_or_payout else 'high'
+        # v4: business_critical=false demotes severity (e.g., logging-only AI cost)
+        is_business_critical = h.get('business_critical', True)
+        # exchange-rate is not money — should be high not critical
+        is_exchange_rate = h.get('classification') == 'exchange-rate'
+        if is_exchange_rate or not is_business_critical:
+            severity = 'high'
+        else:
+            severity = 'critical' if is_balance_or_payout else 'high'
 
         finding = {
             'phase': args.phase,

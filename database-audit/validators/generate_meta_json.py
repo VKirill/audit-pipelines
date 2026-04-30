@@ -73,7 +73,7 @@ def main():
     out = {
         'version': '1.0',
         'pipeline': 'database-audit',
-        'pipeline_version': 'v3',
+        'pipeline_version': 'v4',
         'generated_at': datetime.now(timezone.utc).isoformat(timespec='seconds'),
         'project': {
             'path': project.get('root') or os.getcwd(),

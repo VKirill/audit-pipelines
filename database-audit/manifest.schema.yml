@@ -192,6 +192,12 @@ properties:
             type: { type: string, description: "DB-level type as declared (e.g. Float, DECIMAL(10,2), Numeric)" }
             currency_hint: { type: string }
             classification: { type: string, enum: [balance, price, fee, payout, exchange-rate, quantity, other] }
+            business_critical:
+              type: boolean
+              default: true
+              description: |
+                false = logging-only / AI-token-cost / non-customer-facing — drift не блокирует прод
+                true = customer-facing balance / billing — drift = critical issue
       transaction_sites:
         type: array
         items:
@@ -365,6 +371,30 @@ properties:
             type: array
             items: { type: string }
           notes: { type: string }
+      auth_bypass_candidates:
+        type: array
+        description: HTTP handlers without auth middleware (detected via GitNexus cypher)
+        items:
+          type: object
+          required: [path, file]
+          properties:
+            path: { type: string }
+            method: { type: string, enum: [GET, POST, PUT, DELETE, PATCH] }
+            file: { type: string }
+            lines: { type: string }
+            handler_symbol: { type: string }
+            reason: { type: string }
+      cross_tenant_leak_candidates:
+        type: array
+        description: Handlers querying without tenant_id filter (multi-tenant projects)
+        items:
+          type: object
+          required: [handler_path, query_function, file]
+          properties:
+            handler_path: { type: string }
+            query_function: { type: string }
+            file: { type: string }
+            lines: { type: string }
       cdc_outbox_pattern:
         type: object
         description: CDC / outbox / event-sourcing setup

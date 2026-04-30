@@ -180,7 +180,7 @@ phase_plan:
   "06":
     detectors: [find_migrations, find_dangerous_ddl, find_reversibility]
   "07":
-    detectors: [find_string_concat_sql, find_pii_in_logs, find_secrets_in_repo]
+    detectors: [find_string_concat_sql, find_raw_sql_unsafe, find_orm_wrappers, find_pii_in_logs, find_pii_extended, find_secrets_in_repo]
   "08":
     detectors: [find_pool_settings, find_cache_strategy]
   "09":

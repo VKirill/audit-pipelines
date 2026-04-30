@@ -92,3 +92,88 @@
 ## v1 (2026-04-30) — Initial release
 
 11 фаз + 2 мини. Эвристические детекторы. См. early commits.
+
+---
+
+## v4 (2026-04-30) — Maximum MCP integration (Serena + GitNexus 100%)
+
+После ретроспективы v3 на vechkasov: критический пропуск SQLi через `$queryRawUnsafe`,
+custom DB wrappers, пустые phase 11/10a. v4 фиксит всё.
+
+### Новые детекторы
+
+- `find_raw_sql_unsafe.py` — обнаруживает `$queryRawUnsafe`, `$executeRawUnsafe`,
+  `prisma.$queryRawUnsafe`, `sql.unsafe()` API. Two-tier severity:
+  * **Critical** = Unsafe API + dynamic interpolation/concat в окрестности
+  * **High** = Unsafe API только с positional placeholders (требует manual flow check)
+- `find_orm_wrappers.py` — кастомные DB wrapper-функции (`dbExec`, `dbQuery`,
+  `executeQuery`, `runQuery`). Эти функции — дыра в покрытии ORM-detectors.
+- `find_pii_extended.py` — расширенный PII список: passwords, refresh_token,
+  access_token, oauth_token, webhook_secret, payment-card (card/cvv/iban),
+  GDPR Art. 9 special categories (health, biometric, religion).
+
+### Auto-population phase 11/10a через GitNexus
+
+- `deep_dive.py` v2: для каждого critical finding вызывает GitNexus CLI:
+  * Section 1 «Trace» — auto-populated через `gitnexus context <symbol>`
+  * Section 3 «Blast radius» — auto-populated через `gitnexus impact upstream`
+  * Sections 2, 4, 5, 6 — agent fills (creative work)
+- `adversary_review.py` v2: auto-draft на основе:
+  * Confidence/severity distribution
+  * Money severity inflation warning (>5 critical money = подозрение logging-only)
+  * Strong/weak findings classification
+  * Cognitive bias self-check questions
+
+### Validators v4 enforcement
+
+- `validate_phase.sh` теперь проверяет:
+  * Phase 11: нет `_agent fills_` placeholders в Fix variants → fail
+  * Phase 11: нет unfilled Test strategy секций → fail
+  * Phase 10a: `_adversary_review.md` > 500 байт + нет `_To be filled by agent_` → fail
+  Это предотвращает «skeleton-только» аудиты.
+
+### Manifest schema v4 расширение
+
+- `money_columns[].business_critical`: bool — отделяет AI-token-cost (logging) от
+  customer-facing balance. business_critical=false → severity max=high, не critical.
+- `auth_bypass_candidates`: HTTP handlers без auth middleware (детектируются
+  GitNexus cypher).
+- `cross_tenant_leak_candidates`: handlers без tenant filter в multi-tenant.
+
+### Новые промты для max MCP usage
+
+- `prompts/00f_discover_serena_deep.md` — 8 шагов через Serena LSP:
+  * Verify money endpoints через `find_referencing_symbols` (вместо ручного rg)
+  * SQLi surface через `search_for_pattern` с правильным regex
+  * Verify transaction bodies через `find_symbol include_body=true`
+  * Multi-tenant verification
+  * Auth bypass coverage
+  * PII enrichment (passwords/tokens)
+  * Save progress в Serena memory
+- `prompts/00g_discover_gitnexus_graph.md` — 10 шагов через GitNexus:
+  * `route_map` — все handlers
+  * `impact upstream` для каждой transaction-функции (заранее, для phase 11)
+  * `context` для money функций
+  * Cypher queries: SQLi callers, auth bypass, race candidates, cross-tenant,
+    N+1 (graph-based), pgvector usage
+  * Сохраняет результаты в `audit/evidence/_serena_gitnexus/`
+- `REFERENCE_MCP_TOOLS.md` — полная документация Serena + GitNexus tools с
+  cypher cookbook (7 ready-to-use queries для DB-аудита).
+
+### Findings calibration
+
+- `find_money_floats.py` v2: `business_critical=false` → severity high (не critical)
+- `exchange-rate` classification → severity high (не money critical)
+
+### Smoke test (v3 vs v4 на vechkasov, 90k LOC):
+
+```
+v3: 56 findings, 10 critical (но 7 — money inflation, 0 SQLi caught)
+v4: ожидается ~80 findings:
+  - 14+ SQLi findings (queryRawUnsafe в library-server.ts)
+  - 2-3 auth bypass (GitNexus cypher)
+  - PII расширенный (passwords если есть, tokens)
+  - calibrated money: 4-5 critical (только real customer-facing) вместо 7
+  - phase 11 auto-populated trace+blast-radius
+  - phase 10a auto-drafted adversary review
+```
