@@ -1,0 +1,128 @@
+# Dependabot configuration
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+#
+# Принципы:
+#   - Группирование PR по типу изменений (patch / minor) чтобы не было PR-шторма
+#   - Еженедельная частота для большинства экосистем (ежедневная — overkill)
+#   - Отдельный cadence для GitHub Actions, потому что они критичны для security
+#   - cooldown пока не поддерживается Dependabot нативно — для cooldown используй
+#     Renovate с minimumReleaseAge
+
+version: 2
+
+updates:
+  # ====================================================================
+  # GitHub Actions — самое важное для supply-chain security
+  # ====================================================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    # Группируем по уровню изменений, чтобы review был осмысленным
+    groups:
+      # Major-апдейты — отдельным PR каждый, для ручного review
+      actions-major:
+        update-types:
+          - "major"
+      # Все patch и minor — одним PR
+      actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # ====================================================================
+  # npm / pnpm / yarn — детектится автоматически по lock-файлу
+  # ====================================================================
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      production-deps:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+      dev-deps:
+        dependency-type: "development"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "npm"
+    # Игнорируем major-апдейты по умолчанию — они требуют ручного review
+    # Раскомментируй если хочешь ручной выбор:
+    # ignore:
+    #   - dependency-name: "*"
+    #     update-types: ["version-update:semver-major"]
+
+  # ====================================================================
+  # Python — pip/poetry/uv detect автоматически
+  # ====================================================================
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      python-deps:
+        update-types:
+          - "minor"
+          - "patch"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+
+  # ====================================================================
+  # Docker — если используется
+  # ====================================================================
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # ====================================================================
+  # Go modules — раскомментируй если используется
+  # ====================================================================
+  # - package-ecosystem: "gomod"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #   labels:
+  #     - "dependencies"
+  #     - "go"
+
+  # ====================================================================
+  # Cargo — раскомментируй если используется
+  # ====================================================================
+  # - package-ecosystem: "cargo"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #   labels:
+  #     - "dependencies"
+  #     - "rust"

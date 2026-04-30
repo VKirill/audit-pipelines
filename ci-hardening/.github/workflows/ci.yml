@@ -1,0 +1,584 @@
+# Universal CI Pipeline (2026 best practices)
+#
+# Особенности:
+#   - Все third-party actions запиннены к full-length commit SHA (защита от tj-actions/changed-files,
+#     trivy-action style attacks). См. https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions
+#   - Минимальные permissions на уровне workflow (contents: read), per-job override где нужно больше
+#   - Harden-Runner в audit mode на каждом job для egress-мониторинга
+#   - Concurrency для отмены устаревших запусков
+#   - Timeout на каждом job (защита от hanging билдов)
+#   - persist-credentials: false на checkout (если не нужен push)
+#   - Detect-стек джоб запускает только релевантные проверки
+#
+# SHA проверены вручную через GitHub Releases (актуально на момент создания).
+# Перед использованием обнови SHA через `pinact run` или вручную.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    # paths-ignore позволяет пропускать чисто документационные изменения
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+  workflow_dispatch:
+
+# Отменяем устаревшие запуски на той же ветке
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Минимальные permissions по умолчанию
+# Любой job, которому нужно больше — переопределяет локально
+permissions:
+  contents: read
+
+env:
+  # Использование одной версии Node везде проще для кэша
+  NODE_VERSION: 'lts/*'
+  # Stop pip from spamming about updates in CI
+  PIP_DISABLE_PIP_VERSION_CHECK: 1
+  # Ускоряем npm в CI
+  NPM_CONFIG_FUND: false
+  NPM_CONFIG_AUDIT: false
+
+jobs:
+  # ======================================================================
+  # 1. DETECT — определяем стек проекта
+  # ======================================================================
+  detect:
+    name: Detect stack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      has_node: ${{ steps.check.outputs.has_node }}
+      has_python: ${{ steps.check.outputs.has_python }}
+      has_go: ${{ steps.check.outputs.has_go }}
+      has_rust: ${{ steps.check.outputs.has_rust }}
+      has_php: ${{ steps.check.outputs.has_php }}
+      has_docker: ${{ steps.check.outputs.has_docker }}
+      has_workflows: ${{ steps.check.outputs.has_workflows }}
+      pkg_manager: ${{ steps.check.outputs.pkg_manager }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Detect stack
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          has_node=false; has_python=false; has_go=false
+          has_rust=false; has_php=false; has_docker=false
+          has_workflows=false
+          pkg_manager=""
+
+          [ -f package.json ] && has_node=true
+          if [ -f pyproject.toml ] || [ -f requirements.txt ] || [ -f setup.py ] || [ -f setup.cfg ]; then
+            has_python=true
+          fi
+          [ -f go.mod ] && has_go=true
+          [ -f Cargo.toml ] && has_rust=true
+          [ -f composer.json ] && has_php=true
+          if [ -f Dockerfile ] || find . -name 'Dockerfile' -not -path './node_modules/*' -print -quit | grep -q .; then
+            has_docker=true
+          fi
+          if [ -d .github/workflows ] && [ -n "$(ls -A .github/workflows 2>/dev/null)" ]; then
+            has_workflows=true
+          fi
+
+          # Определяем менеджер пакетов Node
+          if [ -f pnpm-lock.yaml ]; then
+            pkg_manager="pnpm"
+          elif [ -f yarn.lock ]; then
+            pkg_manager="yarn"
+          elif [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            pkg_manager="npm"
+          fi
+
+          {
+            echo "has_node=$has_node"
+            echo "has_python=$has_python"
+            echo "has_go=$has_go"
+            echo "has_rust=$has_rust"
+            echo "has_php=$has_php"
+            echo "has_docker=$has_docker"
+            echo "has_workflows=$has_workflows"
+            echo "pkg_manager=$pkg_manager"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Detected stack"
+            echo "| Component | Detected |"
+            echo "|-----------|----------|"
+            echo "| Node.js | $has_node ($pkg_manager) |"
+            echo "| Python | $has_python |"
+            echo "| Go | $has_go |"
+            echo "| Rust | $has_rust |"
+            echo "| PHP | $has_php |"
+            echo "| Docker | $has_docker |"
+            echo "| Workflows | $has_workflows |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ======================================================================
+  # 2. WORKFLOW LINTING — zizmor проверяет workflows на security-misconfig
+  #    https://woodruffw.github.io/zizmor/
+  # ======================================================================
+  workflow-lint:
+    name: Lint workflows (zizmor)
+    needs: detect
+    if: needs.detect.outputs.has_workflows == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      security-events: write  # для SARIF upload
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor
+        # zizmor находит unpinned actions, dangerous triggers, script injection и т.п.
+        uses: woodruffw/zizmor-action@f52a838cfabf134edcbaa7c8b3677dde20045018 # v0.1.1
+        with:
+          # online-audits требует токена, оставляем локальные правила
+          inputs: ./.github/workflows/
+
+  # ======================================================================
+  # 3. NODE.JS
+  # ======================================================================
+  node:
+    name: Node.js
+    needs: detect
+    if: needs.detect.outputs.has_node == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        if: needs.detect.outputs.pkg_manager == 'pnpm'
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: ${{ needs.detect.outputs.pkg_manager }}
+
+      - name: Install dependencies
+        shell: bash
+        env:
+          PKG_MANAGER: ${{ needs.detect.outputs.pkg_manager }}
+        run: |
+          # Quoting через env, не через ${{ }} — защита от script injection
+          case "$PKG_MANAGER" in
+            pnpm) pnpm install --frozen-lockfile ;;
+            yarn) yarn install --frozen-lockfile ;;
+            npm)  npm ci ;;
+            *)    npm install ;;
+          esac
+
+      - name: Typecheck
+        shell: bash
+        run: |
+          if grep -q '"typecheck"' package.json 2>/dev/null; then
+            npm run typecheck
+          elif [ -f tsconfig.json ]; then
+            npx --no-install tsc --noEmit || npx tsc --noEmit
+          else
+            echo "::notice::No typecheck script or tsconfig.json — skipping"
+          fi
+
+      - name: Lint
+        shell: bash
+        run: |
+          if grep -q '"lint"' package.json 2>/dev/null; then
+            npm run lint
+          else
+            echo "::notice::No lint script — skipping"
+          fi
+
+      - name: Build
+        shell: bash
+        run: |
+          if grep -q '"build"' package.json 2>/dev/null; then
+            npm run build
+          else
+            echo "::notice::No build script — skipping"
+          fi
+
+      - name: Test
+        shell: bash
+        run: |
+          if grep -q '"test"' package.json 2>/dev/null; then
+            # passWithNoTests, чтобы пустой проект не падал — но команда
+            # сначала пытается реальный запуск
+            npm test
+          else
+            echo "::notice::No test script — skipping"
+          fi
+
+  # ======================================================================
+  # 4. PYTHON
+  # ======================================================================
+  python:
+    name: Python
+    needs: detect
+    if: needs.detect.outputs.has_python == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f pyproject.toml ]; then
+            # Пробуем dev-extras, если есть
+            pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null || true
+          fi
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          fi
+          # Обязательные dev-tools
+          pip install ruff mypy pytest
+
+      - name: Lint (ruff)
+        # warn-only пока не вычистим существующий код
+        run: ruff check . --output-format=github || true
+
+      - name: Format check (ruff)
+        run: ruff format --check . || true
+
+      - name: Typecheck (mypy)
+        shell: bash
+        run: |
+          if [ -f mypy.ini ] || grep -q "\[tool.mypy\]" pyproject.toml 2>/dev/null; then
+            mypy . || true  # warn-only до Phase 2
+          else
+            echo "::notice::No mypy config — skipping"
+          fi
+
+      - name: Test (pytest)
+        shell: bash
+        run: |
+          if [ -d tests ] || [ -d test ] || ls test_*.py *_test.py 2>/dev/null | head -1 | grep -q .; then
+            pytest -v
+          else
+            echo "::notice::No tests directory — skipping"
+          fi
+
+  # ======================================================================
+  # 5. GO
+  # ======================================================================
+  go:
+    name: Go
+    needs: detect
+    if: needs.detect.outputs.has_go == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: 'stable'
+          cache: true
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test -race -coverprofile=coverage.out ./...
+
+  # ======================================================================
+  # 6. RUST
+  # ======================================================================
+  rust:
+    name: Rust
+    needs: detect
+    if: needs.detect.outputs.has_rust == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust
+        # dtolnay/rust-toolchain — community-maintained, проверяй SHA при обновлении
+        uses: dtolnay/rust-toolchain@b3b07ba8b418998c39fb20f53e8b695cdcc8de1b # stable (2025-12)
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Format check
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Build
+        run: cargo build --all-targets
+
+      - name: Test
+        run: cargo test --all
+
+  # ======================================================================
+  # 7. PHP
+  # ======================================================================
+  php:
+    name: PHP
+    needs: detect
+    if: needs.detect.outputs.has_php == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@2e947f1f6932d141d076ca441d0e1e881775e95b # v2.31.1
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-progress --prefer-dist --no-interaction
+
+      - name: Static analysis
+        shell: bash
+        run: |
+          if [ -f vendor/bin/phpstan ]; then
+            vendor/bin/phpstan analyse --no-progress
+          elif [ -f vendor/bin/psalm ]; then
+            vendor/bin/psalm
+          fi
+
+      - name: Test
+        shell: bash
+        run: |
+          if [ -f vendor/bin/phpunit ]; then
+            vendor/bin/phpunit
+          elif [ -f vendor/bin/pest ]; then
+            vendor/bin/pest
+          fi
+
+  # ======================================================================
+  # 8. SECURITY: secret scanning + dependency scan
+  # ======================================================================
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0  # gitleaks нужна вся история
+          persist-credentials: false
+
+      - name: Run gitleaks
+        # NOTE: gitleaks-action отдельная третья сторона. Альтернатива - trufflehog,
+        # которую тоже надо пинить.
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # На старте warn-only чтобы не блокировать в первый день
+        continue-on-error: true
+
+  dependency-scan:
+    name: Dependency scan (Trivy CLI)
+    needs: detect
+    if: |
+      needs.detect.outputs.has_node == 'true' ||
+      needs.detect.outputs.has_python == 'true' ||
+      needs.detect.outputs.has_go == 'true' ||
+      needs.detect.outputs.has_rust == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      # IMPORTANT: aquasecurity/trivy-action был скомпрометирован в марте 2026.
+      # Используем Trivy CLI напрямую — устанавливаем official binary, не action.
+      - name: Install Trivy
+        shell: bash
+        run: |
+          # Pin Trivy version explicitly
+          TRIVY_VERSION="0.58.1"
+          curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+            | tar -xz -C /tmp trivy
+          sudo mv /tmp/trivy /usr/local/bin/
+
+      - name: Run Trivy filesystem scan
+        run: |
+          trivy fs \
+            --severity CRITICAL,HIGH \
+            --exit-code 0 \
+            --format sarif \
+            --output trivy-results.sarif \
+            .
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@4e828ff8d448a8a6e532957b1811f387a63867e8 # v3.29.4
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+  # ======================================================================
+  # 9. CODE QUALITY: conventional commits на PR
+  # ======================================================================
+  pr-quality:
+    name: PR quality
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Validate PR title (conventional commits)
+        # Проверяет только title PR — мягче, чем валидация всех коммитов
+        uses: amannn/action-semantic-pull-request@0723387faaf9b38adef4775cd42cfd5155ed6017 # v5.5.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true  # warn-only до Phase 2
+
+  # ======================================================================
+  # 10. FINAL GATE — все обязательные проверки должны пройти
+  # ======================================================================
+  ci-success:
+    name: CI Success
+    needs:
+      - detect
+      - workflow-lint
+      - node
+      - python
+      - go
+      - rust
+      - php
+      - secret-scan
+      - dependency-scan
+      - pr-quality
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    steps:
+      - name: Check job results
+        shell: bash
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS_JSON" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          failures = [name for name, job in data.items() if job['result'] == 'failure']
+          if failures:
+              print(f'::error::Failed jobs: {failures}')
+              sys.exit(1)
+          print('All required jobs passed or skipped')
+          for name, job in data.items():
+              print(f'  {name}: {job[\"result\"]}')
+          "

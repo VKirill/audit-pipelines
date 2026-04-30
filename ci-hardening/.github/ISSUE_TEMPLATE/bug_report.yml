@@ -1,0 +1,47 @@
+name: Bug report
+description: Сообщить о баге
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Описание
+      description: Что произошло?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Шаги для воспроизведения
+      description: Минимальный набор шагов
+      placeholder: |
+        1. Открыть ...
+        2. Сделать ...
+        3. Увидеть ошибку
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемое поведение
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Окружение
+      placeholder: |
+        - OS: macOS 14.5
+        - Версия: ...
+        - Браузер: ...
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Логи / скриншоты
+      description: Если есть. Не вставляй секреты.
+      render: shell

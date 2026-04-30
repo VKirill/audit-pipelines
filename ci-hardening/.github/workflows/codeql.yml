@@ -1,0 +1,74 @@
+# CodeQL - GitHub native SAST
+# https://docs.github.com/en/code-security/code-scanning
+#
+# Phase 2 проверка. Активируй когда стек стабилизируется.
+# Можно также включить через Settings > Code security > "Default setup",
+# но advanced даёт больше контроля.
+
+name: CodeQL
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Раз в неделю, в субботу — для catch-новых правил CodeQL
+    - cron: '0 6 * * 6'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ matrix.language == 'swift' && 'macos-latest' || 'ubuntu-24.04' }}
+    timeout-minutes: 360
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # Включи только релевантные языки для проекта
+        # Полный список: actions, c-cpp, csharp, go, java-kotlin, javascript-typescript,
+        # python, ruby, rust, swift
+        language:
+          - javascript-typescript
+          # - python
+          # - go
+          # - rust
+          # - actions  # NEW в 2025: CodeQL для самих workflows
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@4e828ff8d448a8a6e532957b1811f387a63867e8 # v3.29.4
+        with:
+          languages: ${{ matrix.language }}
+          # security-extended даёт больше правил, чем default
+          # security-and-quality - максимум, но больше шума
+          queries: security-extended
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@4e828ff8d448a8a6e532957b1811f387a63867e8 # v3.29.4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@4e828ff8d448a8a6e532957b1811f387a63867e8 # v3.29.4
+        with:
+          category: "/language:${{matrix.language}}"

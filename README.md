@@ -58,17 +58,17 @@
 
 ---
 
-## Два пайплайна — выбери свой
+## Три пайплайна — выбери свой
 
 <table>
 <tr>
-<td width="50%" valign="top">
+<td width="33%" valign="top">
 
 ### 🎨 [`frontend/`](./frontend)
 
 **React / Next.js сайты**
 
-7 фаз, ~30-90 минут на средний проект.
+7 фаз, ~30-90 минут.
 
 - Архитектура и тех.долг
 - Performance + Core Web Vitals
@@ -77,18 +77,18 @@
 - DX, тулинг, CI/CD
 - Roadmap Now / Next / Later
 
-**Подходит для:** маркетинговых сайтов, e-commerce, SPA, лендингов на Next.js.
+**Для:** маркетинговых сайтов, e-commerce, SPA, лендингов на Next.js.
 
 [Запустить →](./frontend)
 
 </td>
-<td width="50%" valign="top">
+<td width="33%" valign="top">
 
 ### 🛡️ [`codebase/`](./codebase)
 
 **Универсальный аудит — любой стек**
 
-13+ фаз, встроенные «детекторы вранья», ~75-180 минут.
+13+ фаз, ~75-180 минут.
 
 - Trust Map (потоки данных)
 - Money & State Invariants
@@ -97,9 +97,29 @@
 - Машинная сводка `_meta.json` для CI
 - Phase 11 deep-dive при critical
 
-**Подходит для:** бэкенда, API, ботов, монорепо. Python, Go, TypeScript, Java, Rust.
+**Для:** бэкенда, API, ботов, монорепо. Python, Go, TypeScript, Java, Rust.
 
 [Запустить →](./codebase)
+
+</td>
+<td width="33%" valign="top">
+
+### 🔒 [`ci-hardening/`](./ci-hardening)
+
+**Безопасный CI/CD на GitHub**
+
+6 этапов аудита + 4 фазы внедрения.
+
+- Supply-chain hardening (SHA-пины, cooldown)
+- Least-privilege permissions
+- Harden-Runner + zizmor
+- OIDC вместо long-lived secrets
+- Готовый `ci.yml` под автодетект стека
+- Roadmap Phase 0 → 3
+
+**Для:** любого GitHub-репо с CI или без. Учтены инциденты tj-actions, trivy-action, axios.
+
+[Запустить →](./ci-hardening)
 
 </td>
 </tr>
@@ -109,7 +129,9 @@
 
 ```mermaid
 flowchart TD
-    A[У тебя проект] --> B{Это React или<br/>Next.js сайт?}
+    A[У тебя проект] --> Z{Что болит<br/>сильнее всего?}
+    Z -- «CI красный или его нет,<br/>боюсь supply-chain» --> H[ci-hardening/]
+    Z -- «Хочу понять что в коде» --> B{Это React или<br/>Next.js сайт?}
     B -- Да, чистый фронт --> C[frontend/]
     B -- Есть бэкенд / API --> D[codebase/]
     B -- Не уверен --> E{Есть деньги,<br/>транзакции,<br/>auth?}
@@ -120,13 +142,16 @@ flowchart TD
 
     style C fill:#fde7c8,stroke:#d97757,color:#000
     style D fill:#d4e6f1,stroke:#2c3e50,color:#000
+    style H fill:#f5d5d5,stroke:#c0392b,color:#000
 ```
+
+> Пайплайны не взаимоисключают друг друга. Хорошая последовательность: `codebase` или `frontend` → правки по roadmap → `ci-hardening` чтобы зашить найденное в CI и не получить регресс.
 
 ---
 
 ## Что получишь на выходе
 
-Главный артефакт обоих пайплайнов — **ROADMAP**. Это не «80 страниц красивых слов», а конкретный список:
+Главный артефакт всех трёх пайплайнов — **ROADMAP** (у `ci-hardening` дополнительно — готовый `ci.yml` под проект). Это не «80 страниц красивых слов», а конкретный список:
 
 ```
 🔴 Сейчас (Now):
@@ -208,11 +233,11 @@ flowchart TD
 </tr>
 </table>
 
-Команды установки — в README конкретного пайплайна.
+Команды установки — в README конкретного пайплайна. **Для `ci-hardening`** хватает только Claude Code (или любого AI-ассистента с доступом к файлам репо) — Serena и GitNexus не нужны.
 
 ---
 
-## Принципы, которые зашиты в оба пайплайна
+## Принципы, которые зашиты во все три пайплайна
 
 <table>
 <tr><td><b>📂 Read-only</b></td><td>Пайплайн ничего не меняет в коде. Только смотрит и пишет отчёт.</td></tr>
@@ -256,9 +281,13 @@ flowchart TD
 - W3C WCAG 2.2 · WAI-ARIA APG
 - Web.dev (Core Web Vitals)
 
-**Security**
+**Security и supply-chain**
 - OWASP Top 10 + Cheat Sheets
 - Saltzer & Schroeder — *Protection of Information*
+- GitHub Docs — *Security hardening for Actions*
+- GitHub Actions 2026 Security Roadmap
+- StepSecurity Harden-Runner · zizmor · OpenSSF Scorecard
+- Incident reports: tj-actions, trivy-action, axios, bitwarden/cli
 
 **Когнитивные ошибки в анализе**
 - Daniel Kahneman — *Thinking, Fast and Slow*
