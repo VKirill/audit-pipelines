@@ -6,13 +6,13 @@
 
 ## Цель
 
-Создать **полный, проверенный** `audit/manifest.yml` по схеме `manifest.schema.yml`. От качества этого файла зависят все 14 фаз пайплайна.
+Создать **полный, проверенный** `database-audit/manifest.yml` по схеме `manifest.schema.yml`. От качества этого файла зависят все 14 фаз пайплайна.
 
 ---
 
 ## Правила поведения
 
-1. **Read-only.** Никаких правок в коде проекта. Запись только в `audit/manifest.yml` + `audit/00_setup.md` + `.serena/memories/db_audit_discover_log`.
+1. **Read-only.** Никаких правок в коде проекта. Запись только в `database-audit/manifest.yml` + `audit/00_setup.md` + `.serena/memories/db_audit_discover_log`.
 2. **Точные пути.** Никаких glob-аппроксимаций где можно дать список.
 3. **Точные строки.** Каждый `file:lines` ты сам прочитал.
 4. **Stop при сомнении.** Если стек неопределим — спроси пользователя, не выдумывай.
@@ -300,7 +300,7 @@ mode:
 > Discover complete. Manifest saved.
 > Stack: <db>+<orm>, mode: <static|live>, size: <X>.
 > hints: money_columns=N, transaction_sites=M, pii_candidates=K, n_plus_one_candidates=P, dangerous_migrations=Q.
-> Recommend manual review of `audit/manifest.yml` before running phases.
+> Recommend manual review of `database-audit/manifest.yml` before running phases.
 
 **Не запускай run.sh сам.** Это решение пользователя.
 

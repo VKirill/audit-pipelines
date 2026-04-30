@@ -4,7 +4,7 @@
 
 ---
 
-## 1. Finding (запись в `audit/findings.jsonl`)
+## 1. Finding (запись в `database-audit/results/findings.jsonl`)
 
 **Формат:** JSON Lines — одна находка = одна строка валидного JSON.
 
@@ -83,7 +83,7 @@
 
 ---
 
-## 2. Отчёт фазы (`audit/NN_*.md`)
+## 2. Отчёт фазы (`database-audit/results/NN_*.md`)
 
 Каждый отчёт фазы строго следует этой структуре:
 
@@ -112,7 +112,7 @@
 
 ## 5. Артефакты
 
-Список файлов в `audit/evidence/NN_*/`.
+Список файлов в `database-audit/results/evidence/NN_*/`.
 ```
 
 ---

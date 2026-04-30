@@ -48,13 +48,13 @@
 ┌──────────────────────────────────────────────────────────┐
 │  STAGE 0: INIT — bash database-audit/init.sh              │
 │                                                           │
-│   1. Стейджинг промта в audit/_staging/init.md                    │
+│   1. Стейджинг промта в database-audit/_staging/init.md                    │
 │   2. ИИ читает orchestrator prompts/00_discover.md        │
 │   3. ИИ загружает sub-prompts по необходимости:           │
 │      - 00a money    - 00b transactions                    │
 │      - 00c pii      - 00d n+1                             │
 │      - 00e migrations                                     │
-│   4. ИИ создаёт audit/manifest.yml               │
+│   4. ИИ создаёт database-audit/manifest.yml               │
 │   5. validate_manifest.py --strict                        │
 │   6. ИИ останавливается, ждёт user review                 │
 └──────────────────────────────────────────────────────────┘
@@ -70,7 +70,7 @@
 └──────────────────────────────────────────────────────────┘
                           ↓
 ┌──────────────────────────────────────────────────────────┐
-│  REVIEW: viewer/index.html  +  audit/ROADMAP.md           │
+│  REVIEW: viewer/index.html  +  database-audit/results/ROADMAP.md           │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -185,17 +185,17 @@ gitnexus analyze --embeddings
 bash database-audit/init.sh
 # ↓
 # Открой Claude Code, дай команду:
-#   Прочитай audit/_staging/init.md и выполни discover-фазу. Создай audit/manifest.yml.
+#   Прочитай database-audit/_staging/init.md и выполни discover-фазу. Создай database-audit/manifest.yml.
 # ↓
 # ИИ выполнит chunked discovery (orchestrator + 5 sub-prompts) — ~30-90 минут.
-# Результат: audit/manifest.yml
+# Результат: database-audit/manifest.yml
 ```
 
 ### 4. Review manifest
 
 ```bash
-python3 database-audit/validators/validate_manifest.py audit/manifest.yml --strict
-less audit/manifest.yml
+python3 database-audit/validators/validate_manifest.py database-audit/manifest.yml --strict
+less database-audit/manifest.yml
 ```
 
 Поправь yaml вручную если ИИ что-то пропустил.
@@ -209,8 +209,8 @@ bash database-audit/run.sh all
 ### 6. Read
 
 ```bash
-cat audit/ROADMAP.md
-jq . audit/_meta.json
+cat database-audit/results/ROADMAP.md
+jq . database-audit/results/_meta.json
 
 # HTML viewer
 cd audit && cp ../database-audit/viewer/index.html .

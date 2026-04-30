@@ -73,37 +73,37 @@ fi
 
 [[ -f "$SCRIPT_DIR/manifest.schema.yml" ]] || { c_red "Pipeline files missing"; exit 1; }
 
-AUDIT_DIR="${AUDIT_DIR:-audit}"
-mkdir -p "$AUDIT_DIR" "$AUDIT_DIR/evidence" "$AUDIT_DIR/_staging" .serena/memories
+AUDIT_DIR="${AUDIT_DIR:-$SCRIPT_DIR/results}"
+mkdir -p "$AUDIT_DIR" "$AUDIT_DIR/evidence" "$SCRIPT_DIR/_staging" .serena/memories
 touch "$AUDIT_DIR/findings.jsonl"
 
 # Refresh mode
 if [[ "$REFRESH" == "1" ]]; then
-  if [[ ! -f "audit/manifest.yml" ]]; then
+  if [[ ! -f "$SCRIPT_DIR/manifest.yml" ]]; then
     c_red "No existing manifest to refresh. Run init without --refresh first."
     exit 1
   fi
-  PROMPT_FILE="audit/_staging/refresh.md"
+  PROMPT_FILE="$SCRIPT_DIR/_staging/refresh.md"
   {
     echo "# Database Audit — Refresh"
     echo
     echo "Read **\`$SCRIPT_DIR/prompts/refresh.md\`** and execute the refresh protocol."
     echo
-    echo "Existing manifest: \`audit/manifest.yml\`"
+    echo "Existing manifest: \`$SCRIPT_DIR/manifest.yml\`"
     echo "Project root: \`$PROJECT_ROOT\`"
     echo
     echo "Output: updated manifest with refresh_state populated."
     echo
     echo "Validate when done:"
-    echo '  python3 '"$SCRIPT_DIR"'/validators/validate_manifest.py audit/manifest.yml --strict'
+    echo '  python3 '"$SCRIPT_DIR"'/validators/validate_manifest.py $SCRIPT_DIR/manifest.yml --strict'
   } > "$PROMPT_FILE"
   c_green "Refresh staged in $PROMPT_FILE"
   exit 0
 fi
 
 # Already exists?
-if [[ -f "audit/manifest.yml" ]]; then
-  c_yellow "Existing manifest detected at audit/manifest.yml"
+if [[ -f "$SCRIPT_DIR/manifest.yml" ]]; then
+  c_yellow "Existing manifest detected at $SCRIPT_DIR/manifest.yml"
   echo "Options:"
   echo "  - Keep and run phases:    bash database-audit/run.sh all"
   echo "  - Refresh:                bash database-audit/init.sh --refresh"
@@ -112,7 +112,7 @@ if [[ -f "audit/manifest.yml" ]]; then
 fi
 
 # Stage AI prompt
-PROMPT_FILE="audit/_staging/init.md"
+PROMPT_FILE="$SCRIPT_DIR/_staging/init.md"
 {
   echo "# Database Audit — Init Phase (v3)"
   echo
@@ -132,7 +132,7 @@ PROMPT_FILE="audit/_staging/init.md"
   echo
   echo "## Output contract"
   echo
-  echo "Produce **\`audit/manifest.yml\`** at project root, conforming to:"
+  echo "Produce **\`$SCRIPT_DIR/manifest.yml\`** at project root, conforming to:"
   echo "- Schema:  \`$SCRIPT_DIR/manifest.schema.yml\`"
   echo "- Example: \`$SCRIPT_DIR/manifest.example.yml\`"
   echo
@@ -154,6 +154,6 @@ c_green "Init staged."
 echo
 echo "Next:"
 echo "  1. Open Claude Code in this directory"
-echo "  2. Send: Прочитай $PROMPT_FILE и выполни discover-фазу. Создай audit/manifest.yml."
-echo "  3. Review audit/manifest.yml"
+echo "  2. Send: Прочитай $PROMPT_FILE и выполни discover-фазу. Создай $SCRIPT_DIR/manifest.yml."
+echo "  3. Review $SCRIPT_DIR/manifest.yml"
 echo "  4. Run: bash database-audit/run.sh all"

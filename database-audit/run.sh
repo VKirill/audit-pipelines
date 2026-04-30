@@ -138,6 +138,13 @@ case "$cmd" in
     require_manifest
     bash "$SCRIPT_DIR/validators/finalize.sh"
     ;;
+  reset)
+    require_manifest 2>/dev/null || true
+    echo "==> Removing manifest, _staging/, results/ — pipeline code preserved"
+    rm -rf "$SCRIPT_DIR/results" "$SCRIPT_DIR/_staging" "$SCRIPT_DIR/manifest.yml"
+    rm -rf "$AUDIT_DIR"
+    c_green "Reset done. Run init.sh to start fresh."
+    ;;
   *)
     cat <<EOF
 database-audit v3 — phase dispatcher
@@ -149,6 +156,7 @@ Usage:
   bash database-audit/run.sh validate
   bash database-audit/run.sh preflight
   bash database-audit/run.sh finalize
+  bash database-audit/run.sh reset       # wipe runtime, keep pipeline code
 
 Run init.sh first:
   bash database-audit/init.sh

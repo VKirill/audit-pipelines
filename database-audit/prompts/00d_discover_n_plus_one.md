@@ -75,7 +75,7 @@ hints:
 ```bash
 python3 -c "
 import yaml
-m = yaml.safe_load(open('audit/manifest.yml'))
+m = yaml.safe_load(open('database-audit/manifest.yml'))
 n = m.get('hints',{}).get('n_plus_one_candidates',[])
 print(f'n_plus_one_candidates: {len(n)} (target: 5-30)')
 for c in n[:5]:

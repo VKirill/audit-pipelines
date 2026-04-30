@@ -37,22 +37,22 @@ gitnexus analyze --embeddings   # ~1-5 минут
 bash database-audit/init.sh
 ```
 
-Это создаст `audit/_staging/init.md` со ссылкой на мастер-промт. Открой Claude Code:
+Это создаст `database-audit/_staging/init.md` со ссылкой на мастер-промт. Открой Claude Code:
 
 ```
-Прочитай audit/_staging/init.md и выполни discover-фазу. Создай audit/manifest.yml.
+Прочитай database-audit/_staging/init.md и выполни discover-фазу. Создай database-audit/manifest.yml.
 ```
 
-ИИ-модель выполнит **chunked discovery (orchestrator + 5 sub-prompts) протокол** из `prompts/00_discover.md` и создаст `audit/manifest.yml`. Это занимает ~20-40 минут на средний проект.
+ИИ-модель выполнит **chunked discovery (orchestrator + 5 sub-prompts) протокол** из `prompts/00_discover.md` и создаст `database-audit/manifest.yml`. Это занимает ~20-40 минут на средний проект.
 
 ### Шаг 4. Ревью манифеста
 
 ```bash
 # Валидация
-python3 database-audit/validators/validate_manifest.py audit/manifest.yml
+python3 database-audit/validators/validate_manifest.py database-audit/manifest.yml
 
 # Прочитать
-less audit/manifest.yml
+less database-audit/manifest.yml
 ```
 
 **Что проверять:**
@@ -88,15 +88,15 @@ bash database-audit/run.sh phase 05b
 bash database-audit/run.sh detector find_money_floats 02
 ```
 
-После каждой фазы → строка статуса. После всех фаз → `audit/ROADMAP.md`.
+После каждой фазы → строка статуса. После всех фаз → `database-audit/results/ROADMAP.md`.
 
 ### Шаг 7. Читать результат
 
 ```bash
-cat audit/ROADMAP.md           # главный артефакт
-jq . audit/_meta.json          # машинная сводка
-cat audit/_known_unknowns.md   # что осталось проверить
-cat audit/_adversary_review.md # рефлексия
+cat database-audit/results/ROADMAP.md           # главный артефакт
+jq . database-audit/results/_meta.json          # машинная сводка
+cat database-audit/results/_known_unknowns.md   # что осталось проверить
+cat database-audit/results/_adversary_review.md # рефлексия
 ```
 
 ---
@@ -113,8 +113,8 @@ cat audit/_adversary_review.md # рефлексия
 2. Прочитай `database-audit/manifest.schema.yml` — это контракт схемы.
 3. Прочитай `database-audit/manifest.example.yml` — пример заполненного.
 4. Выполни 16 шагов discover-протокола.
-5. Создай `audit/manifest.yml`.
-6. Запусти `python3 database-audit/validators/validate_manifest.py audit/manifest.yml`.
+5. Создай `database-audit/manifest.yml`.
+6. Запусти `python3 database-audit/validators/validate_manifest.py database-audit/manifest.yml`.
 7. Если exit 0 — сообщи пользователю одной строкой: «Discover complete. Manifest saved. Recommend manual review before running phases.» И **остановись**.
 8. Если exit ≠ 0 — исправь и повтори.
 
@@ -127,7 +127,7 @@ cat audit/_adversary_review.md # рефлексия
 3. Прочитай `database-audit/REFERENCE_BOOKS.md`.
 4. Прочитай `database-audit/TEMPLATES.md`.
 5. Запусти `bash database-audit/run.sh all`.
-6. Между фазами читай `prompts/phase_NN_*.md` — там описано, что добавить в `audit/NN_*.md` отчёт фазы помимо детекторов.
+6. Между фазами читай `prompts/phase_NN_*.md` — там описано, что добавить в `database-audit/results/NN_*.md` отчёт фазы помимо детекторов.
 7. После каждой фазы — `validate_phase.sh NN` exit 0.
 8. Финал — `finalize.sh` exit 0 → отчитайся пользователю tl;dr.
 

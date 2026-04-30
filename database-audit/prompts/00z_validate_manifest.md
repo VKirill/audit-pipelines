@@ -7,7 +7,7 @@
 ## 1. Run validator
 
 ```bash
-python3 database-audit/validators/validate_manifest.py audit/manifest.yml --strict
+python3 database-audit/validators/validate_manifest.py database-audit/manifest.yml --strict
 ```
 
 Цель: **exit 0** в `--strict` режиме (sanity warnings = errors).
@@ -33,7 +33,7 @@ python3 database-audit/validators/validate_manifest.py audit/manifest.yml --stri
 # Автоматическая проверка
 python3 - <<'PY'
 import yaml, re, subprocess
-m = yaml.safe_load(open('audit/manifest.yml'))
+m = yaml.safe_load(open('database-audit/manifest.yml'))
 problems = []
 
 # Money
@@ -102,6 +102,6 @@ discovery_confidence:
 
 Если всё прошло — сообщи пользователю:
 
-> Discover complete. Manifest saved at `audit/manifest.yml`.
+> Discover complete. Manifest saved at `database-audit/manifest.yml`.
 > Found: N money_columns (M Float), K transaction_sites (J missing), P pii_candidates (Q unencrypted).
 > Recommend manual review before running phases.

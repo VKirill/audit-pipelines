@@ -5,12 +5,16 @@
 set -euo pipefail
 
 export PROJECT_ROOT="${PROJECT_ROOT:-$(pwd)}"
-export AUDIT_DIR="${AUDIT_DIR:-$PROJECT_ROOT/audit}"
-export MANIFEST="${MANIFEST:-$AUDIT_DIR/manifest.yml}"
+# Pipeline directory (code) — read-only after install
+export PIPELINE_DIR="${PIPELINE_DIR:-$PROJECT_ROOT/database-audit}"
+# Runtime directory — all audit output lives here. Gitignored by default.
+export AUDIT_DIR="${AUDIT_DIR:-$PIPELINE_DIR/results}"
+export MANIFEST="${MANIFEST:-$PIPELINE_DIR/manifest.yml}"
+export STAGING_DIR="${STAGING_DIR:-$PIPELINE_DIR/_staging}"
 export FINDINGS="${FINDINGS:-$AUDIT_DIR/findings.jsonl}"
 export EVIDENCE_DIR="${EVIDENCE_DIR:-$AUDIT_DIR/evidence}"
 
-mkdir -p "$AUDIT_DIR" "$EVIDENCE_DIR"
+mkdir -p "$AUDIT_DIR" "$EVIDENCE_DIR" "$STAGING_DIR"
 [[ -f "$FINDINGS" ]] || touch "$FINDINGS"
 
 # Mirror common color helpers (kept compatible with old scripts/lib/common.sh)

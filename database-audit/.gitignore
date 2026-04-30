@@ -1,0 +1,20 @@
+# database-audit pipeline runtime — gitignored by default.
+# Pipeline code (init.sh, run.sh, prompts/, detectors/, validators/, lib/) is committed.
+# Audit-specific output is NOT committed.
+
+# Manifest with project-specific data (paths, secrets via env_files refs)
+manifest.yml
+
+# AI prompt staging
+_staging/
+
+# Audit results — findings, ROADMAP, evidence
+results/
+
+# Python compile cache
+__pycache__/
+*.pyc
+
+# Editor temp
+.DS_Store
+*.swp

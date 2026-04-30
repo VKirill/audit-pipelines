@@ -2,7 +2,7 @@
 
 **Это главный диспетчер пайплайна для STAGE 1..N (выполнение фаз).**
 
-> **STAGE 0 (discover) описан отдельно** в `prompts/00_discover.md`. Оркестратор работает уже после того, как `audit/manifest.yml` создан и валиден.
+> **STAGE 0 (discover) описан отдельно** в `prompts/00_discover.md`. Оркестратор работает уже после того, как `database-audit/manifest.yml` создан и валиден.
 
 ---
 
@@ -37,12 +37,12 @@ phase_11_deep_dive                → deep_dive (только при ≥1 critic
 3.   detector2.py ...
 4.   ...
 5. validate_phase.sh NN  → exit 0 = фаза готова, иначе fix
-6. Агент пишет audit/NN_*.md report по prompts/phase_NN_*.md
+6. Агент пишет database-audit/results/NN_*.md report по prompts/phase_NN_*.md
 7. validate_phase.sh NN  → ещё раз с заполненным report
 8. → следующая фаза
 ```
 
-Детекторы добавляют findings и evidence. **Агент дополняет отчётом фазы** (`audit/NN_<name>.md`) с narrative обзором (что проверено, что найдено сверх детекторов, ограничения).
+Детекторы добавляют findings и evidence. **Агент дополняет отчётом фазы** (`database-audit/results/NN_<name>.md`) с narrative обзором (что проверено, что найдено сверх детекторов, ограничения).
 
 ---
 
@@ -77,10 +77,10 @@ phase_11_deep_dive                → deep_dive (только при ≥1 critic
 ### 3.5. Manifest is source of truth
 
 Если ты обнаружил проблему, **которая не отражена в manifest** (например, новая money-колонка, которую ИИ пропустил на discover):
-1. Добавь её в `audit/manifest.yml` (это валидно — manifest можно править)
+1. Добавь её в `database-audit/manifest.yml` (это валидно — manifest можно править)
 2. Перезапусти `validate_manifest.py`
 3. Перезапусти соответствующий детектор: `bash database-audit/run.sh detector <name> <phase>`
-4. Зафиксируй обновление в `audit/00_setup.md` под секцией «Manifest amendments».
+4. Зафиксируй обновление в `database-audit/results/00_setup.md` под секцией «Manifest amendments».
 
 ### 3.6. Экономия контекста
 - Не читай файлы целиком — `get_symbols_overview` сначала
@@ -88,7 +88,7 @@ phase_11_deep_dive                → deep_dive (только при ≥1 critic
 
 ### 3.7. Цитирование
 
-Цитаты SQL и code — в `audit/evidence/NN_*/snippets/`. Это нужно чтобы `check_evidence_citations.py` резолвил все ссылки.
+Цитаты SQL и code — в `database-audit/results/evidence/NN_*/snippets/`. Это нужно чтобы `check_evidence_citations.py` резолвил все ссылки.
 
 ### 3.8. Severity
 
@@ -180,7 +180,7 @@ bash database-audit/validators/finalize.sh
 4. Перезапусти детектор.
 
 ### 7.3. Live mode недоступен
-Зафиксируй в `audit/00_setup.md`: `mode: static`. Все findings, требующие EXPLAIN — `confidence ≤ medium`.
+Зафиксируй в `database-audit/results/00_setup.md`: `mode: static`. Все findings, требующие EXPLAIN — `confidence ≤ medium`.
 
 ### 7.4. Serena недоступна
 Fallback на ripgrep + Read tool в Claude Code.
@@ -236,9 +236,9 @@ audit/
 
 ## 10. Возобновление сессии
 
-1. Прочитай `audit/manifest.yml` — чтобы знать стек.
-2. Прочитай `audit/_meta.json` если есть — статус прогресса.
-3. Найди последнюю завершённую фазу (`audit/NN_*.md`).
+1. Прочитай `database-audit/manifest.yml` — чтобы знать стек.
+2. Прочитай `database-audit/results/_meta.json` если есть — статус прогресса.
+3. Найди последнюю завершённую фазу (`database-audit/results/NN_*.md`).
 4. Запусти `validate_phase.sh` на ней.
 5. Если ok — следующая фаза. Если fail — допили текущую.
 
@@ -250,8 +250,8 @@ audit/
 - все `validate_phase.sh NN` для каждой созданной фазы
 - `validate_confidence.py` глобально
 - `check_evidence_citations.py` (все file:lines резолвятся)
-- `audit/ROADMAP.md`, `_known_unknowns.md`, `_adversary_review.md`, `10a_*.md` присутствуют
-- если есть critical — `audit/11_deep_dive.md` присутствует с секцией на каждый
+- `database-audit/results/ROADMAP.md`, `_known_unknowns.md`, `_adversary_review.md`, `10a_*.md` присутствуют
+- если есть critical — `database-audit/results/11_deep_dive.md` присутствует с секцией на каждый
 - `_meta.json` сгенерирован, `verdict: pass | pass-with-conditions | fail`
 
 Только при exit 0 — пиши пользователю tl;dr.
