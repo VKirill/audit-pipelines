@@ -1,0 +1,229 @@
+# JSON Schema for ci-hardening manifest.yml (v2).
+# Validated by validators/validate_manifest.py before each pipeline run.
+
+$schema: "http://json-schema.org/draft-07/schema#"
+title: CI Hardening Audit Manifest
+type: object
+required: [version, generated_at, project, github, paths, phase_plan]
+additionalProperties: false
+
+properties:
+  version: { type: string, enum: ["1.0"] }
+  generated_at: { type: string }
+  generated_by: { type: string }
+  audit_dir: { type: string, default: "results" }
+
+  refresh_state:
+    type: object
+    properties:
+      last_refresh_at: { type: string }
+      previous_git_head: { type: string }
+
+  project:
+    type: object
+    required: [root, name, type]
+    properties:
+      root: { type: string }
+      name: { type: string }
+      type: { type: string, enum: [single, monorepo] }
+      languages:
+        type: array
+        items: { type: string, enum: [node, python, go, rust, php, ruby, java, dotnet, multi, unknown] }
+      package_managers:
+        type: array
+        items: { type: string }
+      git_head: { type: string }
+      git_branch: { type: string }
+
+  github:
+    type: object
+    required: [owner, repo]
+    description: GitHub repo metadata (owner/repo for gh API calls)
+    properties:
+      owner: { type: string }
+      repo: { type: string }
+      default_branch: { type: string }
+      visibility: { type: string, enum: [public, private, internal] }
+      ghas_enabled: { type: boolean, description: GitHub Advanced Security }
+      gh_cli_authenticated: { type: boolean }
+      api_access: { type: string, enum: [full, limited, none] }
+
+  paths:
+    type: object
+    properties:
+      workflows_dir: { type: string, default: ".github/workflows" }
+      workflow_files:
+        type: array
+        items: { type: string }
+      dependabot_config: { type: string }
+      renovate_config: { type: string }
+      codeowners: { type: string }
+      security_policy: { type: string }
+      pr_template: { type: string }
+      issue_templates: { type: array, items: { type: string } }
+
+  hints:
+    type: object
+    additionalProperties: false
+    description: Pre-discovered facts that detectors use directly
+    properties:
+      unpinned_actions:
+        type: array
+        description: third-party actions used with mutable refs (@v4, @main) — главный supply-chain вектор
+        items:
+          type: object
+          required: [action, ref, file, line]
+          properties:
+            action: { type: string }
+            ref: { type: string }
+            file: { type: string }
+            line: { type: integer }
+            current_sha: { type: string }
+            recommended_sha: { type: string }
+
+      excessive_permissions:
+        type: array
+        description: workflows/jobs without explicit permissions or with write-all
+        items:
+          type: object
+          required: [file, scope]
+          properties:
+            file: { type: string }
+            scope: { type: string, enum: [workflow, job] }
+            job_name: { type: string }
+            current: { type: string, description: "current permissions value" }
+            recommended: { type: string }
+
+      persist_credentials_present:
+        type: array
+        description: actions/checkout без persist-credentials false (token остаётся в .git/config)
+        items:
+          type: object
+          properties:
+            file: { type: string }
+            line: { type: integer }
+            job_name: { type: string }
+
+      script_injection_risks:
+        type: array
+        description: ${{ github.event.* }} interpolated в run: blocks (zizmor-style)
+        items:
+          type: object
+          required: [file, line]
+          properties:
+            file: { type: string }
+            line: { type: integer }
+            expression: { type: string }
+            severity: { type: string, enum: [critical, high, medium, low] }
+
+      dangerous_triggers:
+        type: array
+        description: pull_request_target / workflow_run на untrusted code
+        items:
+          type: object
+          properties:
+            file: { type: string }
+            trigger: { type: string }
+            risk_level: { type: string }
+
+      long_lived_credentials:
+        type: array
+        description: long-lived secrets (AWS_ACCESS_KEY_ID etc) which should be OIDC
+        items:
+          type: object
+          properties:
+            secret_name: { type: string }
+            usage_files: { type: array, items: { type: string } }
+            target_cloud: { type: string, enum: [aws, gcp, azure, npm, pypi, dockerhub, other] }
+
+      secrets_in_code:
+        type: array
+        description: hardcoded secrets in source (gitleaks results)
+        items:
+          type: object
+          properties:
+            file: { type: string }
+            line: { type: integer }
+            rule: { type: string }
+            redacted_match: { type: string }
+
+      branch_protection:
+        type: object
+        description: gh api result for default branch protection
+        properties:
+          enabled: { type: boolean }
+          require_pr: { type: boolean }
+          required_status_checks: { type: array, items: { type: string } }
+          require_signed_commits: { type: boolean }
+          require_linear_history: { type: boolean }
+          required_approvals: { type: integer }
+          dismiss_stale_reviews: { type: boolean }
+          enforce_admins: { type: boolean }
+
+      security_features:
+        type: object
+        description: GitHub Settings → Code security
+        properties:
+          dependabot_alerts: { type: boolean }
+          dependabot_security_updates: { type: boolean }
+          secret_scanning: { type: boolean }
+          secret_scanning_push_protection: { type: boolean }
+          code_scanning: { type: boolean }
+          private_vulnerability_reporting: { type: boolean }
+
+      third_party_actions:
+        type: array
+        description: inventory of all third-party actions used (for cooldown/allowlist policy)
+        items:
+          type: object
+          properties:
+            action: { type: string }
+            owner: { type: string }
+            usage_count: { type: integer }
+            files: { type: array, items: { type: string } }
+            is_verified: { type: boolean, description: GitHub Verified Creator badge }
+
+      missing_artefacts:
+        type: array
+        description: Files that should exist but don't (CODEOWNERS, SECURITY.md, etc)
+        items:
+          type: object
+          properties:
+            artefact: { type: string }
+            recommended_path: { type: string }
+            severity: { type: string }
+
+      outdated_actions:
+        type: array
+        description: actions with newer versions available
+        items:
+          type: object
+          properties:
+            action: { type: string }
+            current_ref: { type: string }
+            latest_ref: { type: string }
+            files: { type: array, items: { type: string } }
+
+  mode:
+    type: object
+    properties:
+      type: { type: string, enum: [static, live], default: static }
+      gh_token_env: { type: string, default: GH_TOKEN }
+      api_calls_count: { type: integer, default: 0 }
+
+  phase_plan:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        detectors: { type: array, items: { type: string } }
+        skip_reason: { type: string }
+        notes: { type: string }
+
+  thresholds:
+    type: object
+    additionalProperties: false
+    properties:
+      min_findings_overrides:
+        type: object
+        additionalProperties: { type: integer }

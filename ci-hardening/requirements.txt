@@ -1,0 +1,3 @@
+# ci-hardening pipeline dependencies
+PyYAML>=6.0,<7.0
+jsonschema>=4.23.0,<5.0

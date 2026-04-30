@@ -1,0 +1,6 @@
+manifest.yml
+_staging/
+results/
+__pycache__/
+*.pyc
+.DS_Store
