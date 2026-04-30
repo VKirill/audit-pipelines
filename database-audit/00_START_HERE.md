@@ -5,7 +5,7 @@
 
 ---
 
-**Это точка входа в Database Audit Pipeline v5. Архитектура — manifest-driven.**
+**Это точка входа в Database Audit Pipeline v5.1. Архитектура — manifest-driven.**
 
 ---
 

@@ -128,17 +128,21 @@
 
 ### 🗄️ [`database-audit/`](./database-audit)
 
-**Глубокий аудит БД с MCP-integration**
+**Глубокий аудит БД с автономным мастер-промтом**
 
-14 фаз · 30 детекторов · 11 ORM · Serena+GitNexus.
+14 фаз · 30 детекторов · 11 ORM · Serena+GitNexus · v5.1
 
+- **Master prompt** — один промт, путь к проекту, всё автономно
+- **Live drift verification** — invariant queries в проде
 - **SQLi detection** через `$queryRawUnsafe` + ORM wrappers
 - **Race conditions** + Float-money + idempotency
-- **PII** (passwords, OAuth tokens, payment cards)
-- **FK indexes**, N+1 с confidence ranking
-- **Auth bypass** + cross-tenant leak (GitNexus cypher)
-- **Migrations** zero-downtime (Sadalage Part II)
-- **Auto-fill** phase 11 deep_dive через GitNexus impact
+- **FK priority by table size** (live evidence cross-ref)
+- **PII** + endpoint-aware exposure (GitNexus route_map)
+- **Auth bypass** + cross-tenant leak (cypher queries)
+- **Auto-fill** phase 11 (trace + blast radius через `gitnexus impact`)
+- **ROADMAP time-budget** — Quick wins / Sprint plan / Quarter goals
+- **Verify-fix** prompt — re-check applied fixes
+- **Multi-project compare** — severity matrix между проектами
 
 **Для:** проектов с БД (Postgres, MySQL, Mongo, ...). 11 ORM: Prisma, Drizzle, TypeORM, Sequelize, Mongoose, SQLAlchemy, Django, GORM, ActiveRecord, Hibernate, raw SQL. Static + опц. live mode с `DATABASE_URL`.
 

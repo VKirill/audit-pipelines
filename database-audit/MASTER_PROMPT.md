@@ -78,7 +78,7 @@ bash database-audit/init.sh
 
 ### Stage 1 — GitNexus indexing (auto, 1-5 минут)
 
-**Это критический шаг для phase 11 deep_dive auto-fill.** В v4 этот шаг был пропущен → secs 1/3 пусты.
+**Это критический шаг для phase 11 deep_dive auto-fill.** В v4 (предыдущая итерация) этот шаг был пропущен → secs 1/3 пусты.
 
 ```bash
 PROJECT_NAME=$(basename "$PROJECT_PATH")
@@ -114,7 +114,7 @@ fi
 9. database-audit/prompts/00z_validate_manifest.md        — self-validation gate
 ```
 
-**Особое внимание (новое в v5):**
+**Особое внимание (новое в v5.1):**
 
 #### 2a. Live drift verification (если `mode: live`)
 
@@ -393,10 +393,10 @@ bash database-audit/validators/finalize.sh
 
 ## Версионирование
 
-Этот промт = `v5` мастер-промта.
-Pipeline = `database-audit v4` (manifest schema, detectors, validators).
+Этот промт = `v5.1` мастер-промта.
+Pipeline = `database-audit v5.1` (manifest schema, detectors, validators).
 
-Совместимость: master prompt v5 работает с pipeline v4.0+ (требует `gitnexus analyze` step и расширенные prompts/00f, 00g).
+Совместимость: master prompt v5.1 работает с pipeline v5.1+ (требует `gitnexus analyze` step и расширенные prompts/00f, 00g).
 
 ---
 
