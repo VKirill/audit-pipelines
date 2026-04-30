@@ -24,7 +24,7 @@ def sh(cmd, default=''):
 
 def main():
     audit_dir = Path(os.environ.get('AUDIT_DIR', 'audit'))
-    manifest_path = Path(os.environ.get('MANIFEST', 'database-audit.manifest.yml'))
+    manifest_path = Path(os.environ.get('MANIFEST', 'audit/manifest.yml'))
     findings_path = audit_dir / 'findings.jsonl'
 
     if not audit_dir.exists() or not findings_path.exists():

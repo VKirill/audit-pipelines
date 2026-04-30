@@ -94,7 +94,7 @@ hints:
 ```bash
 python3 -c "
 import yaml
-m = yaml.safe_load(open('database-audit.manifest.yml'))
+m = yaml.safe_load(open('audit/manifest.yml'))
 mc = m.get('hints',{}).get('money_columns',[])
 me = m.get('hints',{}).get('money_endpoints',[])
 print(f'money_columns: {len(mc)}')

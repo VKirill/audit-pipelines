@@ -131,7 +131,7 @@ def check_sanity_thresholds(manifest, root):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('manifest', nargs='?', default='database-audit.manifest.yml')
+    ap.add_argument('manifest', nargs='?', default='audit/manifest.yml')
     ap.add_argument('--strict', action='store_true',
                     help='Treat sanity warnings as errors')
     args = ap.parse_args()

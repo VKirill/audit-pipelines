@@ -6,7 +6,7 @@ set -euo pipefail
 
 export PROJECT_ROOT="${PROJECT_ROOT:-$(pwd)}"
 export AUDIT_DIR="${AUDIT_DIR:-$PROJECT_ROOT/audit}"
-export MANIFEST="${MANIFEST:-$PROJECT_ROOT/database-audit.manifest.yml}"
+export MANIFEST="${MANIFEST:-$AUDIT_DIR/manifest.yml}"
 export FINDINGS="${FINDINGS:-$AUDIT_DIR/findings.jsonl}"
 export EVIDENCE_DIR="${EVIDENCE_DIR:-$AUDIT_DIR/evidence}"
 

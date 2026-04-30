@@ -14,7 +14,7 @@ except ImportError:
 
 
 def main():
-    manifest_path = Path(os.environ.get('MANIFEST', 'database-audit.manifest.yml'))
+    manifest_path = Path(os.environ.get('MANIFEST', 'audit/manifest.yml'))
     if not manifest_path.exists():
         print('manifest not found'); return 1
 

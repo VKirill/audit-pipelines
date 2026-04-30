@@ -9,7 +9,7 @@
 ### 1. Прочитай существующий manifest
 
 ```bash
-cat database-audit.manifest.yml | head -50
+cat audit/manifest.yml | head -50
 ```
 
 Зафиксируй:
@@ -64,7 +64,7 @@ find packages/db/prisma -name '*.sql' 2>/dev/null | wc -l       # current migrat
 ### 6. Re-validate
 
 ```bash
-python3 database-audit/validators/validate_manifest.py database-audit.manifest.yml --strict
+python3 database-audit/validators/validate_manifest.py audit/manifest.yml --strict
 ```
 
 ### 7. Сообщи пользователю
@@ -85,4 +85,4 @@ python3 database-audit/validators/validate_manifest.py database-audit.manifest.y
 - Изменение размера проекта на класс (M → L)
 - Прошло > 6 месяцев
 
-В таких случаях — `rm database-audit.manifest.yml && bash database-audit/init.sh`.
+В таких случаях — `rm audit/manifest.yml && bash database-audit/init.sh`.

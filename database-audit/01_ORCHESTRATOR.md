@@ -2,7 +2,7 @@
 
 **Это главный диспетчер пайплайна для STAGE 1..N (выполнение фаз).**
 
-> **STAGE 0 (discover) описан отдельно** в `prompts/00_discover.md`. Оркестратор работает уже после того, как `database-audit.manifest.yml` создан и валиден.
+> **STAGE 0 (discover) описан отдельно** в `prompts/00_discover.md`. Оркестратор работает уже после того, как `audit/manifest.yml` создан и валиден.
 
 ---
 
@@ -77,7 +77,7 @@ phase_11_deep_dive                → deep_dive (только при ≥1 critic
 ### 3.5. Manifest is source of truth
 
 Если ты обнаружил проблему, **которая не отражена в manifest** (например, новая money-колонка, которую ИИ пропустил на discover):
-1. Добавь её в `database-audit.manifest.yml` (это валидно — manifest можно править)
+1. Добавь её в `audit/manifest.yml` (это валидно — manifest можно править)
 2. Перезапусти `validate_manifest.py`
 3. Перезапусти соответствующий детектор: `bash database-audit/run.sh detector <name> <phase>`
 4. Зафиксируй обновление в `audit/00_setup.md` под секцией «Manifest amendments».
@@ -236,7 +236,7 @@ audit/
 
 ## 10. Возобновление сессии
 
-1. Прочитай `database-audit.manifest.yml` — чтобы знать стек.
+1. Прочитай `audit/manifest.yml` — чтобы знать стек.
 2. Прочитай `audit/_meta.json` если есть — статус прогресса.
 3. Найди последнюю завершённую фазу (`audit/NN_*.md`).
 4. Запусти `validate_phase.sh` на ней.

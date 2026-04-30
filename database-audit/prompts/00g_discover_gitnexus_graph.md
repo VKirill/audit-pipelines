@@ -120,7 +120,7 @@ RETURN f.file, f.name'
 Для multi-tenant проектов (если `manifest.hints.multi_tenant_isolation.model = 'discriminator-column'`):
 
 ```bash
-DISC=$(yq '.hints.multi_tenant_isolation.discriminator_column' database-audit.manifest.yml)
+DISC=$(yq '.hints.multi_tenant_isolation.discriminator_column' audit/manifest.yml)
 gitnexus.cypher "MATCH (h:Handler)-[:CALLS*1..5]->(q:Function)
 WHERE q.body =~ '(?i).*find.*|.*select.*|.*update.*|.*delete.*'
   AND NOT q.body CONTAINS '${DISC}'

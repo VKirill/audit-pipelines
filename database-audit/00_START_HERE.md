@@ -37,22 +37,22 @@ gitnexus analyze --embeddings   # ~1-5 минут
 bash database-audit/init.sh
 ```
 
-Это создаст `.audit-init.md` со ссылкой на мастер-промт. Открой Claude Code:
+Это создаст `audit/_staging/init.md` со ссылкой на мастер-промт. Открой Claude Code:
 
 ```
-Прочитай .audit-init.md и выполни discover-фазу. Создай database-audit.manifest.yml.
+Прочитай audit/_staging/init.md и выполни discover-фазу. Создай audit/manifest.yml.
 ```
 
-ИИ-модель выполнит **chunked discovery (orchestrator + 5 sub-prompts) протокол** из `prompts/00_discover.md` и создаст `database-audit.manifest.yml`. Это занимает ~20-40 минут на средний проект.
+ИИ-модель выполнит **chunked discovery (orchestrator + 5 sub-prompts) протокол** из `prompts/00_discover.md` и создаст `audit/manifest.yml`. Это занимает ~20-40 минут на средний проект.
 
 ### Шаг 4. Ревью манифеста
 
 ```bash
 # Валидация
-python3 database-audit/validators/validate_manifest.py database-audit.manifest.yml
+python3 database-audit/validators/validate_manifest.py audit/manifest.yml
 
 # Прочитать
-less database-audit.manifest.yml
+less audit/manifest.yml
 ```
 
 **Что проверять:**
@@ -113,8 +113,8 @@ cat audit/_adversary_review.md # рефлексия
 2. Прочитай `database-audit/manifest.schema.yml` — это контракт схемы.
 3. Прочитай `database-audit/manifest.example.yml` — пример заполненного.
 4. Выполни 16 шагов discover-протокола.
-5. Создай `database-audit.manifest.yml`.
-6. Запусти `python3 database-audit/validators/validate_manifest.py database-audit.manifest.yml`.
+5. Создай `audit/manifest.yml`.
+6. Запусти `python3 database-audit/validators/validate_manifest.py audit/manifest.yml`.
 7. Если exit 0 — сообщи пользователю одной строкой: «Discover complete. Manifest saved. Recommend manual review before running phases.» И **остановись**.
 8. Если exit ≠ 0 — исправь и повтори.
 

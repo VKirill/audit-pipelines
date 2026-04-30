@@ -102,7 +102,7 @@ hints:
 ```bash
 python3 -c "
 import yaml
-m = yaml.safe_load(open('database-audit.manifest.yml'))
+m = yaml.safe_load(open('audit/manifest.yml'))
 ts = m.get('hints',{}).get('transaction_sites',[])
 miss = [t for t in ts if t['kind'] == 'missing-transaction']
 mc = m.get('hints',{}).get('money_columns',[])

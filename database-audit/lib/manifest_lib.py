@@ -15,7 +15,7 @@ def get_paths():
     """Return tuple (audit_dir, project_root, manifest_path, findings_path, evidence_dir)."""
     project_root = Path(os.environ.get('PROJECT_ROOT', os.getcwd()))
     audit_dir = Path(os.environ.get('AUDIT_DIR', str(project_root / 'audit')))
-    manifest_path = Path(os.environ.get('MANIFEST', str(project_root / 'database-audit.manifest.yml')))
+    manifest_path = Path(os.environ.get('MANIFEST', str(project_root / 'audit/manifest.yml')))
     findings_path = audit_dir / 'findings.jsonl'
     evidence_dir = audit_dir / 'evidence'
     audit_dir.mkdir(parents=True, exist_ok=True)

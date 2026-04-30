@@ -85,7 +85,7 @@ gitleaks detect --no-banner --no-git --source . --report-format json --report-pa
 ```bash
 python3 -c "
 import yaml
-m = yaml.safe_load(open('database-audit.manifest.yml'))
+m = yaml.safe_load(open('audit/manifest.yml'))
 pii = m.get('hints',{}).get('pii_candidates',[])
 print(f'pii_candidates: {len(pii)}')
 crit = [p for p in pii if p.get('classification') in ('credentials','payment-card','biometric','special-category') and not p.get('encrypted_at_rest')]
