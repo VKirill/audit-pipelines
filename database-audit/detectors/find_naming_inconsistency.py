@@ -61,7 +61,7 @@ def main():
             'severity': 'low',
             'confidence': 'high',
             'title': 'Mixed naming conventions в schema',
-            'location': {'file': 'multiple', 'lines': '1', 'db_object': 'whole schema'},
+            'location': {'file': str(sorted([t['source_file'] for t in data.get('tables', [])])[0] if data.get('tables') else 'unknown'), 'lines': '1', 'db_object': 'whole schema'},
             'evidence': f'Table styles: {table_styles}; Column styles: {column_styles}.',
             'confidence_rationale': 'Style derived from schema_summary.json by automatic classifier.',
             'impact': 'Затрудняет ручной написание SQL и review кода. Индикатор отсутствия style guide.',
