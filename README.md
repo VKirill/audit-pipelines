@@ -128,23 +128,34 @@
 
 ### 🗄️ [`database-audit/`](./database-audit)
 
-**Глубокий аудит БД с автономным мастер-промтом**
+**Глубокий аудит БД, single-command автономный**
 
-14 фаз · 30 детекторов · 11 ORM · Serena+GitNexus · v5.1
+14 фаз · 30 детекторов · 11 ORM · Serena+GitNexus · **v5.2**
 
-- **Master prompt** — один промт, путь к проекту, всё автономно
-- **Live drift verification** — invariant queries в проде
+```
+PROJECT_PATH=/your/project
+```
+
+Это весь required input. ИИ автоматически:
+
+- **Auto-detects mode** — MCP postgres → env-файлы → config → fallback static
+- **Live drift verification** — invariant queries в проде (находит реальные утечки баланса)
+- **Read-only safety** — без verified read-only role → fallback static
 - **SQLi detection** через `$queryRawUnsafe` + ORM wrappers
 - **Race conditions** + Float-money + idempotency
 - **FK priority by table size** (live evidence cross-ref)
 - **PII** + endpoint-aware exposure (GitNexus route_map)
 - **Auth bypass** + cross-tenant leak (cypher queries)
-- **Auto-fill** phase 11 (trace + blast radius через `gitnexus impact`)
+- **Auto-fill phase 11** — trace + blast radius через `gitnexus impact`
 - **ROADMAP time-budget** — Quick wins / Sprint plan / Quarter goals
-- **Verify-fix** prompt — re-check applied fixes
+- **Verify-fix prompt** — re-check applied fixes
 - **Multi-project compare** — severity matrix между проектами
 
-**Для:** проектов с БД (Postgres, MySQL, Mongo, ...). 11 ORM: Prisma, Drizzle, TypeORM, Sequelize, Mongoose, SQLAlchemy, Django, GORM, ActiveRecord, Hibernate, raw SQL. Static + опц. live mode с `DATABASE_URL`.
+**Default live behaviour:** ИИ ищет DSN, проверяет read-only роль, переключается на live mode для глубоких findings. Если опасно (production user / нет read-only роли) — fallback на static с warning.
+
+**Override:** `mode=static` для forced static, `DATABASE_URL=<dsn>` для явного DSN.
+
+**Для:** проектов с БД (Postgres, MySQL, Mongo, ...). 11 ORM: Prisma, Drizzle, TypeORM, Sequelize, Mongoose, SQLAlchemy, Django, GORM, ActiveRecord, Hibernate, raw SQL.
 
 [Запустить →](./database-audit)
 

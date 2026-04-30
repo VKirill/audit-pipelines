@@ -5,7 +5,7 @@
 
 ---
 
-**Это точка входа в Database Audit Pipeline v5.1. Архитектура — manifest-driven.**
+**Это точка входа в Database Audit Pipeline v5.2. Архитектура — manifest-driven.**
 
 ---
 
@@ -124,6 +124,29 @@ cat database-audit/results/_adversary_review.md # рефлексия
 8. Если exit ≠ 0 — исправь и повтори.
 
 **Не запускай фазы сам** — это решение пользователя после ревью манифеста.
+
+### Default behaviour: live-mode auto-detection
+
+ИИ при init.sh должен автоматически проверить:
+
+1. **MCP postgres availability** — `pg_list_databases` если доступен в Claude Code MCP servers
+2. **DSN в env-файлах**:
+   ```bash
+   for f in .env .env.local .env.development apps/*/.env packages/*/.env; do
+     [ -f "$f" ] && grep -E '^(DATABASE_URL|DB_URL|POSTGRES_URL|PG_URL)=' "$f"
+   done
+   ```
+3. **Read-only role verification** перед live SQL:
+   ```bash
+   psql "$DSN" -t -c "SELECT current_user, current_setting('default_transaction_read_only')"
+   ```
+4. **Decision:**
+   - MCP postgres + project DB найдена → `mode: live`, `connection: mcp-postgres`
+   - DSN + read-only verified → `mode: live`, `connection: dsn`
+   - DSN + write-allowed user → `mode: static` + warn в `_known_unknowns.md`
+   - Нет DSN → `mode: static` + note про invariant checks
+
+5. Сообщи пользователю auto-detected результат **одним** сообщением (single checkpoint).
 
 ### Если manifest.yml есть и пользователь сказал «run phases»
 

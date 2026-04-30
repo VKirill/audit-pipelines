@@ -50,17 +50,39 @@ pip install -r database-audit/requirements.txt
 
 ## Optional (live mode + extended detectors)
 
-### Database clients
+### Database access (live mode)
 
-| Tool | When needed |
-|------|-------------|
-| `psql` (PostgreSQL client) | live-mode + Postgres backend |
-| `mysql` | live-mode + MySQL/MariaDB backend |
-| `mongosh` (MongoDB Shell) | live-mode + Mongo backend |
+В priority order — пайплайн пытается live mode через эти источники:
 
+| Tool | When | Preferred? |
+|------|------|------------|
+| **MCP postgres server** (Claude Code MCP) | live mode + Postgres + Claude Code with MCP | ⭐ **preferred** — DSN-free, read-only enforced |
+| `psql` (PostgreSQL client) | live mode + Postgres + DSN из env | стандартный путь |
+| `mysql` | live mode + MySQL/MariaDB + DSN | для MySQL/MariaDB проектов |
+| `mongosh` (MongoDB Shell) | live mode + Mongo + DSN | для Mongo проектов |
+
+**MCP postgres setup** (preferred):
+```bash
+# Если используешь Claude Code и есть MCP postgres сервер настроенный —
+# пайплайн автоматически использует его для live mode (без DSN)
+# Setup: см. https://github.com/modelcontextprotocol/servers/tree/main/src/postgres
+```
+
+**CLI clients** (fallback):
 ```bash
 sudo apt install postgresql-client mysql-client
 # mongosh: https://www.mongodb.com/try/download/shell
+```
+
+### Live mode decision tree
+
+```
+Stage 0.5 — DSN/mode auto-detection:
+  1. Check MCP postgres available? → use it (live mode, DSN-free)
+  2. Else: scan env files (.env, .env.local, monorepo workspaces)
+  3. Else: scan config files (database.yml, settings.py via Serena)
+  4. Found DSN? → verify read-only role → live mode
+  5. No DSN OR write-rights user → static mode (with note)
 ```
 
 ### MCP servers

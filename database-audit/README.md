@@ -1,6 +1,6 @@
 <div align="center">
 
-  <h1>🗄️ Database Audit Pipeline <code>v5.1</code></h1>
+  <h1>🗄️ Database Audit Pipeline <code>v5.2</code></h1>
 
   <p>
     <b>Production-grade manifest-driven аудит БД с 100% MCP integration.</b><br/>
@@ -8,7 +8,7 @@
   </p>
 
   <p>
-    <img src="https://img.shields.io/badge/version-v5.1-orange" alt="v5.1"/>
+    <img src="https://img.shields.io/badge/version-v5.2-orange" alt="v5.1"/>
     <img src="https://img.shields.io/badge/architecture-manifest--driven-blue" alt="Manifest-driven"/>
     <img src="https://img.shields.io/badge/MCP-Serena%20%2B%20GitNexus-purple" alt="MCP native"/>
     <img src="https://img.shields.io/badge/detectors-30-green" alt="30 detectors"/>
