@@ -6,29 +6,25 @@
 
 ## Как использовать (для пользователя)
 
-В Claude Code запусти:
+В Claude Code запусти **одной командой**:
 
 ```
 Прочитай /home/ubuntu/projects/audit-pipelines/database-audit/MASTER_PROMPT.md
-и выполни полный аудит проекта по пути:
+и выполни полный аудит проекта:
 
 PROJECT_PATH=/home/ubuntu/apps/<project_name>
-
-Mode: <static | live>           # static — только код; live — с DATABASE_URL
-DATABASE_URL=<dsn-if-live>      # опц., только для live
 ```
 
-ИИ сам:
-1. Установит pipeline в проект
-2. Проиндексирует через GitNexus
-3. Проведёт chunked discovery (8 sub-prompts)
-4. Создаст и provalидирует manifest
-5. Запустит все 14 фаз
-6. Заполнит phase 11 deep_dive (включая Fix variants A/B/C)
-7. Заполнит phase 10a adversary review (с calibration)
-8. Сгенерирует финальный отчёт пользователю
+**От пользователя — ТОЛЬКО путь к проекту.** Всё остальное ИИ определяет сам:
 
-**От пользователя — НИЧЕГО кроме указания пути и mode.**
+- ✅ **Mode auto-detect** (static vs live) — через попытку найти DSN в проекте
+- ✅ **DATABASE_URL discovery** — через MCP/env/config files (см. Stage 0.5)
+- ✅ **Pipeline install** в проект
+- ✅ **GitNexus indexing** через MCP
+- ✅ **Chunked discovery** (9 sub-prompts через Serena+GitNexus MCP)
+- ✅ **Manifest creation + validation**
+- ✅ **Все 14 фаз** + auto-fill phase 11 + calibration phase 10a
+- ✅ **Финальный отчёт** одним сообщением
 
 ---
 
@@ -38,9 +34,12 @@ DATABASE_URL=<dsn-if-live>      # опц., только для live
 
 ### Что разрешено
 
-- Читать любые файлы в `$PROJECT_PATH`
-- Запускать read-only SQL через `$DATABASE_URL` (только если `mode=live` и роль read-only verified)
-- Использовать MCP-инструменты Serena (find_symbol/find_referencing_symbols/search_for_pattern/write_memory) и GitNexus (query/context/impact/cypher/route_map)
+- Читать любые файлы в `$PROJECT_PATH` (включая .env*, config/*, settings.py)
+- Запускать read-only SQL через MCP postgres (если доступен) ИЛИ через `$DATABASE_URL` (только если read-only role verified)
+- Использовать MCP-инструменты:
+  - **Serena**: find_symbol / find_referencing_symbols / search_for_pattern / write_memory
+  - **GitNexus**: query / context / impact / cypher / route_map
+  - **postgres** (если доступен): pg_query (read-only) / pg_list_databases / pg_describe_table — для DSN-free live mode
 - Использовать `gitnexus analyze` для индексации
 - Создавать/изменять только файлы внутри `$PROJECT_PATH/database-audit/` (pipeline + runtime)
 - Запускать `bash database-audit/init.sh`, `run.sh`, `validators/*.{sh,py}`
@@ -58,7 +57,7 @@ DATABASE_URL=<dsn-if-live>      # опц., только для live
 
 ## Пошаговый план (твой авто-runbook)
 
-### Stage 0 — Bootstrap (1-2 минуты)
+### Stage 0 — Bootstrap
 
 ```bash
 cd "$PROJECT_PATH"
@@ -71,9 +70,109 @@ fi
 
 # 0.2 Проверить зависимости
 python3 -c "import yaml, jsonschema" || pip install -r database-audit/requirements.txt
+```
 
-# 0.3 Run init.sh (создаёт _staging/init.md)
+### Stage 0.5 — DSN/mode auto-detection (новое в v5.1)
+
+> **Цель:** определить может ли быть запущен `live mode` без интерактивности от пользователя.
+
+#### 0.5.1 — Проверка MCP postgres (предпочтительный способ)
+
+```python
+# Если в Claude Code доступен MCP server "postgres" — используй его
+# вместо прямого DATABASE_URL. Это безопаснее (read-only enforced на MCP уровне).
+
+# Псевдокод:
+mcp_servers = check_available_mcp_servers()  # gitnexus, serena, postgres, ...
+if 'postgres' in mcp_servers:
+    databases = mcp_postgres.pg_list_databases()
+    # Найти БД проекта по имени из package.json/composer.json/etc
+    project_db = guess_project_db(databases, project_name=basename(PROJECT_PATH))
+    if project_db:
+        mode = 'live'
+        connection_method = 'mcp-postgres'
+        # Здесь pg_query будет использоваться напрямую через MCP
+```
+
+#### 0.5.2 — Поиск DSN в env-файлах проекта
+
+Если MCP postgres недоступен или не находит проектную БД:
+
+```bash
+# Сканируй env файлы (в priority order)
+for env_file in     "$PROJECT_PATH/.env"     "$PROJECT_PATH/.env.local"     "$PROJECT_PATH/.env.development"     "$PROJECT_PATH/apps/*/.env"     "$PROJECT_PATH/packages/*/.env"; do
+    if [ -f "$env_file" ]; then
+        # Найди DATABASE_URL, DB_URL, POSTGRES_URL, PG_CONNECTION etc
+        DSN=$(grep -E '^(DATABASE_URL|DB_URL|POSTGRES_URL|PG_URL|MONGO_URL|MYSQL_URL)=' "$env_file" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
+        if [ -n "$DSN" ]; then
+            echo "Found DSN in $env_file"
+            break
+        fi
+    fi
+done
+```
+
+#### 0.5.3 — Поиск DSN в config files
+
+```bash
+# config/database.yml (Rails)
+# config/database.json (Node)
+# settings.py (Django) — DATABASES dict
+# application.yml (Spring)
+# Через Serena search_for_pattern
+serena.search_for_pattern(
+    substring_pattern=r'(DATABASE_URL|connectionString|datasource\.url|DATABASES\s*=)',
+    glob='**/config/**/*.{yml,yaml,json,py}',
+    paths_include=[PROJECT_PATH]
+)
+```
+
+#### 0.5.4 — Безопасность: read-only verification ОБЯЗАТЕЛЬНО
+
+Если DSN найден → **перед** использованием в live mode:
+
+```bash
+# 1. Проверь default_transaction_read_only
+psql "$DSN" -t -c "SELECT current_user, current_setting('default_transaction_read_only')"
+
+# 2. Если current_user имеет write права — НЕ использовать live mode
+# 3. Если есть отдельная audit_ro роль — переключись на неё
+# 4. Иначе → mode = static, помечай в _known_unknowns.md
+```
+
+**Решение mode (decision matrix):**
+
+| Условие | mode | source |
+|---|---|---|
+| MCP postgres доступен + проектная БД найдена | `live` | mcp-postgres |
+| DSN найден в env + read-only role verified | `live` | env-file |
+| DSN найден, но write-allowed user | `static` | + warn в `_known_unknowns.md` |
+| DSN не найден | `static` | + note «consider live mode for invariant checks» |
+| Несколько DSN (production + staging) | `live` для staging only, не production | env-priority |
+
+#### 0.5.5 — Сообщи пользователю auto-detected mode
+
+В первом ответе после bootstrap:
+
+```
+🔍 Auto-detected:
+- mode: <static | live>
+- source: <mcp-postgres | env-file:.env.local | none>
+- read_only_role: <verified | not-verified | n/a>
+
+[Если live] Запускаю live drift verification + EXPLAIN на топ-30 запросов.
+[Если static] Запускаю static analysis. Live invariant checks помечены в _known_unknowns.
+
+Продолжаю автоматически. Если хочешь принудительно static-mode — прерви и запусти повторно с `mode=static` в команде.
+```
+
+Это **single user-facing checkpoint**. После него — без интерактивности до финального report.
+
+#### 0.5.6 — Run init.sh
+
+```bash
 bash database-audit/init.sh
+# init.sh теперь видит mode из 0.5 и записывает в _staging/init.md
 ```
 
 ### Stage 1 — GitNexus indexing (auto, 1-5 минут)
@@ -407,10 +506,14 @@ Pipeline = `database-audit v5.1` (manifest schema, detectors, validators).
 аудит проекта.
 
 PROJECT_PATH=<абсолютный путь>
-mode=<static | live>
-DATABASE_URL=<если live>
-
-После завершения дай финальный отчёт.
 ```
 
-Это всё что нужно от пользователя.
+**Это всё.** Один путь. ИИ автоматически:
+- определит mode (static vs live) через MCP postgres / env-files / config
+- проверит read-only безопасность
+- запустит pipeline целиком
+- даст финальный отчёт
+
+Если нужно forced static mode — добавь `mode=static` в команду (override).
+Если нужен явный DSN — добавь `DATABASE_URL=<dsn>` (override).
+По умолчанию — full autonomous.

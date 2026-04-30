@@ -181,6 +181,33 @@ v4: ожидается ~80 findings:
 ---
 
 
+
+### v5.2 — single-arg autonomous mode (2026-05-01)
+
+User input simplified to **only `PROJECT_PATH`**. Mode (static vs live) and DATABASE_URL detected automatically.
+
+#### MASTER_PROMPT.md changes
+
+- Removed required `mode` and `DATABASE_URL` from user command
+- Added Stage 0.5 — DSN/mode auto-detection с 4 источниками (priority order):
+  1. **MCP postgres** server (если доступен в Claude Code) → `pg_query` + `pg_list_databases` → DSN-free live mode
+  2. **env files** (.env, .env.local, .env.development, monorepo workspace .env)
+  3. **Config files** (config/database.yml, settings.py, application.yml) через Serena search
+  4. **Fallback** — static mode + note в `_known_unknowns.md`
+- Read-only role verification — обязательная перед live SQL
+- Decision matrix: `MCP postgres` → live → `env + read-only` → live → `env + write-allowed` → static + warn → `no DSN` → static + note
+
+#### Override flags (optional)
+
+- `mode=static` — forced static (даже если DSN найден)
+- `DATABASE_URL=<dsn>` — явный override DSN (для случаев когда auto-detect промахивается)
+
+#### Single user-facing checkpoint
+
+После Stage 0.5 — **одно** сообщение пользователю с auto-detected mode + source. Дальше — full autonomous до финального report.
+
+---
+
 ### v5.1 — closing nice-to-have backlog (2026-05-01)
 
 Все 4 отложенных пункта v5 реализованы:
