@@ -122,3 +122,49 @@ if mc and not miss:
 - Kleppmann, *Designing Data-Intensive Applications* Ch. 7 Transactions
 - Helland, *Life Beyond Distributed Transactions*
 - Mihalcea, *High Performance Java Persistence* Ch. 14
+
+---
+
+## 🔴 v5 — Live drift verification (если mode: live)
+
+> **Это findings уровня DB-LIVE-001 на vechkasov v4.** Без этого шага скрытые утечки в проде остаются невидимыми.
+
+### Шаг: invariant queries для каждого denormalization
+
+Для каждой пары `(denormalized_field, source_aggregation)`:
+
+```sql
+-- Шаблон: balance vs sum(top-ups)
+SELECT p.id, p.name,
+       p.<denormalized_col> AS denormalized,
+       COALESCE(t.computed, 0) AS computed,
+       p.<denormalized_col> - COALESCE(t.computed, 0) AS drift
+FROM <parent_table> p
+LEFT JOIN (
+  SELECT <fk_col>, SUM(<source_col>) AS computed
+  FROM <source_table> GROUP BY <fk_col>
+) t ON t.<fk_col> = p.id
+WHERE ABS(p.<denormalized_col> - COALESCE(t.computed, 0)) > 0.01;
+```
+
+### Действия по результату
+
+- **drift > 0.01 на N клиентах** → НЕМЕДЛЕННО создать finding `DB-LIVE-NNN`:
+  - `severity: critical`, `confidence: high` (это **факт** в проде, не теория)
+  - `exploit_proof`: «Не нужен — drift УЖЕ существует в проде на момент аудита»
+  - `recommendation`: 1) urgent SQL sync, 2) fix root-cause race, 3) add monitoring
+  - Сохранить `evidence/live/balance_drift.txt` с конкретными ID/числами
+
+- **drift = 0** → отметить в evidence что invariant holds
+
+### Известные кандидаты (общие паттерны)
+
+| Денормализация | Source | Когда применять |
+|---|---|---|
+| `account.balance` | `SUM(transactions.amount)` | если есть transactional ledger |
+| `project.balanceRub` | `SUM(top_ups.remainingRub)` | FIFO balance |
+| `wallet.totalSpent` | `SUM(charges.amount)` | spending denorm |
+| `inventory.available` | `total - SUM(reservations.qty)` | inventory pre-aggregation |
+| `user.followerCount` | `COUNT(follows WHERE followee=user)` | social counters |
+
+Если в проекте есть любая из этих пар — обязательно invariant check.

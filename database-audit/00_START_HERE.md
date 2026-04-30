@@ -1,6 +1,11 @@
-# 00 — START HERE (v3)
+# 00 — START HERE (v5)
 
-**Это точка входа в Database Audit Pipeline v3. Архитектура — manifest-driven.**
+> **🚀 Хочешь автономный режим?** Один промт, путь к проекту — и пайплайн делает всё сам.
+> См. **`MASTER_PROMPT.md`** — единая точка для полного аудита без интерактивности.
+
+---
+
+**Это точка входа в Database Audit Pipeline v5. Архитектура — manifest-driven.**
 
 ---
 

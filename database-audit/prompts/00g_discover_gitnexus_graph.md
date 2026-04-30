@@ -213,3 +213,60 @@ Phase 11 deep_dive имеет 6 секций. GitNexus auto-fill секции:
 - **6. Recommended next step** (decision)
 
 Это **резко** сокращает ручную работу ИИ в фазе 11.
+
+---
+
+## 🔴 v5 — Route map PII exposure verification
+
+> Этот шаг был в v4, но не enforced. v5 делает обязательным.
+
+### Шаги
+
+#### 1. Получить route_map
+
+```bash
+gitnexus.route_map > database-audit/results/evidence/_serena_gitnexus/route_map.json
+```
+
+#### 2. Для каждого endpoint — найти query function в его call chain
+
+```cypher
+MATCH (h:Handler)-[:CALLS*1..5]->(q:Function)
+WHERE h.path = '$endpoint_path'
+  AND q.body =~ '(?i).*select.*'
+RETURN q.body, q.name, q.file
+```
+
+#### 3. Cross-reference с pii_candidates
+
+Для каждого query body — проверь содержит ли упоминание PII колонок из `manifest.hints.pii_candidates`:
+
+```python
+import re, yaml, json
+manifest = yaml.safe_load(open('database-audit/manifest.yml'))
+pii_cols = {(p['table'], p['column']) for p in manifest['hints'].get('pii_candidates', [])}
+
+# Для каждого endpoint × query — match
+# Если PII колонка в SELECT → endpoint exposes PII
+```
+
+#### 4. Дополнительная проверка — наличие audit_log
+
+```cypher
+MATCH (h:Handler {path: '$endpoint'})-[:CALLS*1..5]->(audit:Function)
+WHERE audit.name =~ '(?i).*audit.*log.*|.*track.*|.*record.*'
+RETURN COUNT(audit) > 0 AS has_audit
+```
+
+#### 5. Решение
+
+- Endpoint exposes PII + audit log present → OK
+- Endpoint exposes PII + no audit log → **finding `DB-PII-NNN [high]`** + recommendation: добавить audit_log table
+- Endpoint exposes credentials/payment-card + no audit log → **critical**
+
+Сохрани evidence:
+```
+evidence/_serena_gitnexus/pii_exposure_map.json
+```
+
+Это закрывает blind spot v4 — там были PII findings, но не было их **связи** с конкретными API endpoints.

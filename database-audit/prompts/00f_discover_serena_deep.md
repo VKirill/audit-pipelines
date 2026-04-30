@@ -196,3 +196,43 @@ serena.write_memory(
 - [ ] `_known_unknowns.md` обновлён случаями degraded MCP
 
 Без всех галочек — не переходи к 00g.
+
+---
+
+## 🔴 v5 — Idempotency unique-constraint verification
+
+> Для каждой `money_endpoints[i]` с `has_idempotency_key: false` — двойная проверка через Serena, не только grep по signature.
+
+### Шаги
+
+#### 1. Поиск unique constraint на (object_id, idempotency_key) в схеме
+
+Для каждой money_column таблицы:
+
+```
+serena.search_for_pattern(
+    substring_pattern=r'@@unique\s*\(\s*\[[^\]]*idempotency',
+    glob='**/*.prisma'
+)
+serena.search_for_pattern(
+    substring_pattern=r'UNIQUE.*\b(idempotency|operation_id|request_id)\b',
+    glob='**/*.sql'
+)
+```
+
+#### 2. Поиск Idempotency-Key header в HTTP routes
+
+```
+serena.search_for_pattern(
+    substring_pattern=r'(Idempotency-Key|x-idempotency|idempotency_key)',
+    glob='**/api/**/*.ts'
+)
+```
+
+#### 3. Решение
+
+- Constraint в БД + header parse в route → `has_idempotency_key: true`
+- Только header без БД constraint → `partial` (header useless без БД enforcement) → finding `DB-MONEY-NNN [high]`
+- Ничего → `has_idempotency_key: false` → finding `DB-MONEY-NNN [critical]`
+
+Это **точнее** чем grep по signature функций — проверяется реальная защита на БД-уровне.

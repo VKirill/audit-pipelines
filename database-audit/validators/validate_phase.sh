@@ -169,17 +169,33 @@ if [[ "$PHASE" == "11" ]]; then
   fi
 fi
 
-# v4: phase 10a — _adversary_review.md must NOT be empty/template
+# v5: phase 10a — comprehensive enforcement
 if [[ "$PHASE" == "10a" ]]; then
   if [[ -f "$AUDIT_DIR/_adversary_review.md" ]]; then
     size=$(wc -c < "$AUDIT_DIR/_adversary_review.md")
     if (( size < 500 )); then
-      c_red "_adversary_review.md too small ($size bytes) — looks like template"
+      c_red "_adversary_review.md too small ($size bytes) — agent must enrich"
       errors=$((errors+1))
     fi
     if grep -q "_To be filled by agent_" "$AUDIT_DIR/_adversary_review.md" 2>/dev/null; then
-      c_red "_adversary_review.md still has placeholder text — agent must enrich"
+      c_red "_adversary_review.md has placeholder text — agent must enrich"
       errors=$((errors+1))
+    fi
+    # v5: required sections
+    for section in "Strong findings" "Severity calibration" "Systematic risks"; do
+      if ! grep -qE "^## .*${section}" "$AUDIT_DIR/_adversary_review.md" 2>/dev/null; then
+        c_red "_adversary_review.md missing section: ## $section"
+        errors=$((errors+1))
+      fi
+    done
+    # v5: confidence calibration check
+    high_count=$(jq -c 'select(.confidence == "high")' "$FINDINGS" 2>/dev/null | grep -c . || true)
+    total_count=$(grep -c . "$FINDINGS" 2>/dev/null || echo 1)
+    if (( total_count > 0 )) && (( high_count * 100 / total_count > 50 )); then
+      if ! grep -qE "(Confidence|calibration justification)" "$AUDIT_DIR/_adversary_review.md" 2>/dev/null; then
+        c_red "_adversary_review.md: high>50% but no calibration justification"
+        errors=$((errors+1))
+      fi
     fi
   fi
 fi

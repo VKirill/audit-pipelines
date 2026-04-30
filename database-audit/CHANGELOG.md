@@ -177,3 +177,65 @@ v4: ожидается ~80 findings:
   - phase 11 auto-populated trace+blast-radius
   - phase 10a auto-drafted adversary review
 ```
+
+---
+
+## v5 (2026-05-01) — Autonomous master prompt + retroactive fixes
+
+После live-mode прогона на vechkasov v4: 161 findings (включая `DB-LIVE-001` — реальная утечка денег в проде SKUDOV.NET / abiteq), 33 critical, mode=live с 8 evidence файлами. Ретроспектива выявила 7 точек улучшения.
+
+### 🚀 Master prompt (главное)
+
+- **`MASTER_PROMPT.md`** — единый автономный промт. Пользователь даёт только PROJECT_PATH + mode → ИИ выполняет ВСЕ stages без интерактивности:
+  - Stage 0: bootstrap (install pipeline + check deps)
+  - Stage 1: GitNexus auto-index (новое)
+  - Stage 2: Discovery (chunked через 9 sub-prompts)
+  - Stage 3: Manifest validation (autonomous, без user review)
+  - Stage 4: Run all phases
+  - Stage 5: Phase 11 enrichment (Fix variants A/B/C — обязательно)
+  - Stage 6: Phase 10a calibration (severity inflation/deflation)
+  - Stage 7: Finalize
+  - Stage 8: Single-message final report
+
+### Critical retroactive fixes
+
+#### 1. GitNexus auto-index в init.sh
+В v4 deep_dive показал `_GitNexus context unavailable_` для всех 33 critical (Section 1, 3 пусты). Причина: `gitnexus analyze` не запускался автоматически.
+
+**Fix:** init.sh теперь auto-detects если проект не индексирован → запускает `gitnexus analyze --embeddings` автоматически. Phase 11 secs 1, 3 теперь auto-fill через GitNexus context/impact.
+
+#### 2. Live drift verification (00b)
+В v4 `DB-LIVE-001` нашли **только потому что ИИ сам додумался**. Промт не требовал этого шага.
+
+**Fix:** `00b_discover_transactions.md` теперь обязывает: для каждой пары `(denormalized, source_aggregation)` запустить SQL invariant query. 5 готовых паттернов в шаблоне (balance/topup, wallet/spend, inventory/reservations, follower-count, totalSpent).
+
+#### 3. Idempotency unique-constraint check (00f)
+В v4 `no-idempotency` findings основывались на signature функций — медленно и неточно.
+
+**Fix:** `00f_discover_serena_deep.md` добавил Serena LSP проверку:
+- `@@unique([..., idempotency_key])` в Prisma schema
+- `UNIQUE` constraint в SQL миграциях
+- `Idempotency-Key` header parse в HTTP routes
+3-уровневая classification: `false` / `partial` / `true`.
+
+#### 4. Route map PII exposure (00g)
+В v4 PII findings были, но **не связаны** с конкретными API endpoints.
+
+**Fix:** `00g_discover_gitnexus_graph.md` обязывает cross-reference `route_map` с `pii_candidates`:
+- Endpoint exposes PII + audit_log → OK
+- Endpoint exposes PII + no audit_log → finding `DB-PII-NNN [high]`
+- Endpoint exposes credentials/payment-card + no audit_log → critical
+
+### Validator v5 enforcement
+
+`validate_phase.sh phase 10a`:
+- Required sections: `Strong findings`, `Severity calibration`, `Systematic risks` — fail если отсутствуют
+- Confidence calibration: если `high > 50%` от total — обязательно секция «Confidence calibration» с обоснованием
+
+### Smoke test on vechkasov
+
+v4 → v5 ожидается:
+- DB-LIVE-NNN findings растут (invariant verification обязателен) — больше скрытых утечек найдётся
+- DB-PII-NNN с link на endpoint (route_map cross-ref) — точнее findings
+- Phase 11 Section 1, 3 — реально auto-populated через GitNexus
+- 99% автономность — пользователь только указывает PROJECT_PATH

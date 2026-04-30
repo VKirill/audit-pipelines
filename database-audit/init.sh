@@ -75,6 +75,20 @@ fi
 
 AUDIT_DIR="${AUDIT_DIR:-$SCRIPT_DIR/results}"
 mkdir -p "$AUDIT_DIR" "$AUDIT_DIR/evidence" "$SCRIPT_DIR/_staging" .serena/memories
+
+# v5: GitNexus auto-index for project (critical for phase 11 deep_dive auto-fill)
+if command -v gitnexus >/dev/null 2>&1 || command -v npx >/dev/null 2>&1; then
+  PROJECT_NAME="$(basename "$PROJECT_ROOT")"
+  GN_CMD="gitnexus"
+  command -v gitnexus >/dev/null 2>&1 || GN_CMD="npx gitnexus"
+  if ! $GN_CMD list 2>/dev/null | grep -q "$PROJECT_NAME"; then
+    c_yellow "GitNexus index missing — analyzing project (1-5 min)..."
+    $GN_CMD analyze --embeddings 2>&1 | tail -5 || c_yellow "gitnexus analyze failed (continuing without)"
+  elif $GN_CMD status 2>&1 | grep -qiE 'stale|outdated'; then
+    c_yellow "GitNexus index stale — re-analyzing..."
+    $GN_CMD analyze --embeddings 2>&1 | tail -5 || true
+  fi
+fi
 touch "$AUDIT_DIR/findings.jsonl"
 
 # Refresh mode
