@@ -58,15 +58,42 @@
 
 ---
 
-## Четыре пайплайна — выбери свой
+## Пять пайплайнов — выбери свой
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
+### ⚡ [`nodejs-audit/`](./nodejs-audit)
+
+**Быстрый аудит JS/TS — точка входа**
+
+10 фаз · 30–90 мин · **single-arg autonomous mode**.
+
+```
+PROJECT_PATH=/your/project
+```
+
+Это весь required input. ИИ сам:
+
+- **Pipeline install** — копирует `nodejs-audit/` в проект
+- **Auto-detect** — `npm/yarn/pnpm/bun`, TS/JS, размер
+- **Sanity check** — корректно останавливается если не JS/TS
+- **10 фаз через `npx --yes`** — без установки в `package.json`
+- **Без MCP** — никаких Serena/GitNexus, чистый bash+grep
+- **`FINAL-REPORT.md` + `_meta.json`** для CI (verdict pass/warn/fail)
+- **Готовые промты** для фиксов в финальном отчёте
+
+**Для:** любого JS/TS проекта (Node-бэкенд, React/Next-фронт, монорепо, бот, CLI). Когда нужен быстрый первый проход без возни с MCP.
+
+[Запустить →](./nodejs-audit) · [📋 MASTER_PROMPT](./nodejs-audit/MASTER_PROMPT.md)
+
+</td>
+<td width="50%" valign="top">
+
 ### 🎨 [`frontend/`](./frontend)
 
-**React / Next.js сайты**
+**React / Next.js сайты — глубокий аудит**
 
 7 фаз: архитектура → roadmap.
 
@@ -77,11 +104,13 @@
 - DX, тулинг, CI/CD
 - Roadmap Now / Next / Later
 
-**Для:** маркетинговых сайтов, e-commerce, SPA, лендингов на Next.js.
+**Для:** маркетинговых сайтов, e-commerce, SPA, лендингов на Next.js. Когда нужен глубокий проход с навигацией по графу кода.
 
 [Запустить →](./frontend)
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 ### 🛡️ [`codebase/`](./codebase)
@@ -102,8 +131,6 @@
 [Запустить →](./codebase)
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 ### 🔒 [`ci-hardening/`](./ci-hardening)
@@ -124,7 +151,9 @@
 [Запустить →](./ci-hardening)
 
 </td>
-<td width="50%" valign="top">
+</tr>
+<tr>
+<td width="100%" colspan="2" valign="top">
 
 ### 🗄️ [`database-audit/`](./database-audit)
 
@@ -170,7 +199,9 @@ flowchart TD
     A[У тебя проект] --> Z{Что болит<br/>сильнее всего?}
     Z -- «CI красный или его нет,<br/>боюсь supply-chain» --> H[ci-hardening/]
     Z -- «Тормозит, теряет данные,<br/>боюсь миграций» --> DB[database-audit/]
-    Z -- «Хочу понять что в коде» --> B{Это React или<br/>Next.js сайт?}
+    Z -- «Хочу понять что в коде» --> Q{JS/TS проект?<br/>Нужен быстрый<br/>первый проход?}
+    Q -- Да, без MCP, paste-and-run --> N[nodejs-audit/]
+    Q -- Нужен глубокий аудит --> B{Это React или<br/>Next.js сайт?}
     B -- Да, чистый фронт --> C[frontend/]
     B -- Есть бэкенд / API --> D[codebase/]
     B -- Не уверен --> E{Есть деньги,<br/>транзакции,<br/>auth?}
@@ -179,19 +210,20 @@ flowchart TD
     F -- Да --> D
     F -- Нет --> C
 
+    style N fill:#fff2a8,stroke:#b7950b,color:#000
     style C fill:#fde7c8,stroke:#d97757,color:#000
     style D fill:#d4e6f1,stroke:#2c3e50,color:#000
     style H fill:#f5d5d5,stroke:#c0392b,color:#000
     style DB fill:#d5f5e3,stroke:#27ae60,color:#000
 ```
 
-> Пайплайны не взаимоисключают друг друга. Хорошая последовательность: `codebase` или `frontend` → правки по roadmap → `database-audit` если есть БД → `ci-hardening` чтобы зашить найденное в CI.
+> Пайплайны не взаимоисключают друг друга. Хорошая последовательность для JS/TS: `nodejs-audit` (быстрый обзор) → правки по roadmap → `codebase` или `frontend` (глубокий) → `database-audit` если есть БД → `ci-hardening` чтобы зашить найденное в CI.
 
 ---
 
 ## Что получишь на выходе
 
-Главный артефакт всех четырёх пайплайнов — **ROADMAP**. У `ci-hardening` дополнительно — готовый `ci.yml`. У `database-audit` — машинная сводка `_meta.json` и `_known_unknowns.md` (что осталось проверить). Это не «80 страниц красивых слов», а конкретный список:
+Главный артефакт всех пяти пайплайнов — **ROADMAP**. У `nodejs-audit` дополнительно — `_meta.json` для CI. У `ci-hardening` — готовый `ci.yml`. У `database-audit` — машинная сводка `_meta.json` и `_known_unknowns.md` (что осталось проверить). Это не «80 страниц красивых слов», а конкретный список:
 
 ```
 🔴 Сейчас (Now):

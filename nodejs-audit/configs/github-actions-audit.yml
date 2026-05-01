@@ -1,0 +1,57 @@
+# Скопируй в .github/workflows/audit.yml
+# Запускает все проверки на каждый PR и push в main/master
+
+name: Audit
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Format check
+        run: npm run audit:format
+
+      - name: Lint
+        run: npm run audit:lint
+
+      - name: Type check
+        run: npm run audit:types
+        if: hashFiles('tsconfig.json') != ''
+
+      - name: Tests
+        run: npm run audit:test
+
+      - name: Security audit
+        run: npm run audit:security
+        continue-on-error: true # не блокируем PR из-за известных уязвимостей в transitive deps
+
+      - name: Dependencies check
+        run: npm run audit:deps
+        continue-on-error: true
+
+      - name: Upload coverage
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 7
