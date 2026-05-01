@@ -132,7 +132,7 @@ Required evidence:
 
 ---
 
-## v2: Manifest workflow
+## Manifest workflow
 
 **Какие manifest-секции читает эта фаза:** `paths.migration_files`, `hints.dangerous_migrations`
 

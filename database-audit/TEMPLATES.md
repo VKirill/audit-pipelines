@@ -200,9 +200,8 @@ High с medium effort, medium с большим impact.
 
 ```json
 {
-  "version": "1.0",
+  "schema_version": "1.0",
   "pipeline": "database-audit",
-  "pipeline_version": "v1",
   "generated_at": "2026-04-30T12:00:00Z",
   "project": {
     "path": "/path/to/project",

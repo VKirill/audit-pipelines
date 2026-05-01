@@ -125,9 +125,9 @@ if mc and not miss:
 
 ---
 
-## 🔴 v5 — Live drift verification (если mode: live)
+## 🔴 Live drift verification (если mode: live)
 
-> **Это findings уровня DB-LIVE-001 на vechkasov v4.** Без этого шага скрытые утечки в проде остаются невидимыми.
+> **Это самый высокоценный класс находок пайплайна.** Без этого шага скрытые утечки в проде остаются невидимыми.
 
 ### Шаг: invariant queries для каждого denormalization
 

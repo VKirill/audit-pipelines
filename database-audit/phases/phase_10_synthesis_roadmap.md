@@ -108,7 +108,7 @@ bash database-audit/scripts/validate_phase.sh 10
 
 ---
 
-## v2: Manifest workflow
+## Manifest workflow
 
 **Какие manifest-секции читает эта фаза:** findings.jsonl + все предыдущие отчёты
 

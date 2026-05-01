@@ -1,11 +1,11 @@
-# 00 — START HERE (v5)
+# 00 — START HERE
 
 > **🚀 Хочешь автономный режим?** Один промт, путь к проекту — и пайплайн делает всё сам.
 > См. **`MASTER_PROMPT.md`** — единая точка для полного аудита без интерактивности.
 
 ---
 
-**Это точка входа в Database Audit Pipeline v5.2. Архитектура — manifest-driven.**
+**Это точка входа в Database Audit Pipeline. Архитектура — manifest-driven.**
 
 ---
 
@@ -167,19 +167,3 @@ bash database-audit/init.sh --refresh
 
 Это перепроходит discover и показывает diff с предыдущим manifest. Пользователь решает что мержить.
 
----
-
-## Что изменилось с v1
-
-| Аспект | v1 | v3 |
-|--------|----|----|
-| Архитектура | эвристическая | manifest-driven |
-| Discover | размазано по `detect_db_stack.sh` | один промт `00_discover.md` |
-| Универсальность | ломалось на монорепо | ИИ сам обходит все workspaces |
-| Edit под проект | правка кода скриптов | edit yaml |
-| Repeatable | повторное сканирование | `init.sh --refresh` с diff |
-| Детекторы | bash + грубые pipes | Python pure functions над manifest |
-| Validators | хардкод путей | env-aware (`AUDIT_DIR`/`PROJECT_ROOT`) |
-| Скрипты | 14 в `scripts/` | 27 в `detectors/` + 6 в `validators/` |
-
-Старая версия сохранена в `scripts.v1/` для совместимости.

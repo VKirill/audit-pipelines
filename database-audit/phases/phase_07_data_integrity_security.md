@@ -169,7 +169,7 @@ Required evidence:
 
 ---
 
-## v2: Manifest workflow
+## Manifest workflow
 
 **Какие manifest-секции читает эта фаза:** `hints.pii_candidates`, `hints.raw_sql_in_code`
 

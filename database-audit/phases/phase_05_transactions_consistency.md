@@ -138,7 +138,7 @@ Required evidence:
 
 ---
 
-## v2: Manifest workflow
+## Manifest workflow
 
 **Какие manifest-секции читает эта фаза:** `hints.transaction_sites` (kind: missing-transaction, external-io-inside-transaction)
 

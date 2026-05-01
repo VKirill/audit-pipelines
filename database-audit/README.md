@@ -1,6 +1,6 @@
 <div align="center">
 
-  <h1>🗄️ Database Audit Pipeline <code>v5.2</code></h1>
+  <h1>🗄️ Database Audit Pipeline</h1>
 
   <p>
     <b>Production-grade manifest-driven аудит БД с 100% MCP integration.</b><br/>
@@ -8,7 +8,6 @@
   </p>
 
   <p>
-    <img src="https://img.shields.io/badge/version-v5.2-orange" alt="v5.1"/>
     <img src="https://img.shields.io/badge/architecture-manifest--driven-blue" alt="Manifest-driven"/>
     <img src="https://img.shields.io/badge/MCP-Serena%20%2B%20GitNexus-purple" alt="MCP native"/>
     <img src="https://img.shields.io/badge/detectors-30-green" alt="30 detectors"/>
@@ -28,15 +27,13 @@
 
 <br/>
 
-> **v5.1 — финальная итерация.** Один автономный мастер-промт ([`MASTER_PROMPT.md`](./MASTER_PROMPT.md)) — пользователь даёт PROJECT_PATH + mode, ИИ выполняет все 8 stages без интерактивности (bootstrap → GitNexus indexing → discovery через Serena LSP + cypher → manifest validation → 14 фаз → phase 11 enrichment с Fix variants A/B/C → phase 10a calibration → finalize → single-message report).
+> **Полный автономный пайплайн.** Один мастер-промт ([`MASTER_PROMPT.md`](./MASTER_PROMPT.md)) — пользователь даёт PROJECT_PATH + mode, ИИ выполняет все 8 stages без интерактивности (bootstrap → GitNexus indexing → discovery через Serena LSP + cypher → manifest validation → 14 фаз → phase 11 enrichment с Fix variants A/B/C → phase 10a calibration → finalize → single-message report).
 >
-> Дальше **30 детерминированных детекторов** работают по manifest. Phase 11 deep_dive auto-fills trace + blast radius через `gitnexus impact`, phase 10a adversary review с severity calibration.
+> **30 детерминированных детекторов** работают по manifest. Phase 11 deep_dive auto-fills trace + blast radius через `gitnexus impact`, phase 10a adversary review с severity calibration.
 
 ---
 
-## 🚀 v5.1 — что нового
-
-### Автономный режим (главное)
+## 🚀 Запуск
 
 ```
 Прочитай database-audit/MASTER_PROMPT.md и проведи полный аудит.
@@ -47,11 +44,11 @@ DATABASE_URL=postgresql://audit_ro:***@host/db
 
 ИИ автономно делает 8 stages: bootstrap → indexing → discovery → validate → run → enrich phase 11 → calibrate → finalize → отчёт.
 
-### v5.1 фичи
+### Ключевые возможности
 
 | Фича | Файл | Что делает |
 |---|---|---|
-| **Live drift verification** | `00b_discover_transactions.md` | Обязательный SQL invariant check для каждой денормализации (balance vs sum, inventory vs reserved, ...). На vechkasov v4 нашли реальную утечку 7593 RUB (vechkasov live-mode прогон) у клиента SKUDOV.NET. |
+| **Live drift verification** | `00b_discover_transactions.md` | Обязательный SQL invariant check для каждой денормализации (balance vs sum, inventory vs reserved, ...). На реальном live-mode прогоне находил утечки в денежных операциях. |
 | **GitNexus auto-index** | `init.sh` | Автоматически запускает `gitnexus analyze` если проект не индексирован — фиксит auto-fill phase 11 sections. |
 | **Idempotency unique-constraint check** | `00f_discover_serena_deep.md` | 3-уровневая classification: false / partial (header без БД constraint) / true (header + unique constraint). |
 | **Route map PII exposure** | `00g_discover_gitnexus_graph.md` | Cross-reference HTTP routes с pii_candidates → endpoint-aware findings. |
@@ -59,7 +56,7 @@ DATABASE_URL=postgresql://audit_ro:***@host/db
 | **Verify-fix prompt** | `prompts/verify_fix.md` | Re-check applied fixes для конкретных finding IDs. Snapshots previous run, re-verifies invariants, статусы fixed/partial/still-open/regressed. |
 | **ROADMAP time-budget** | `synthesize_roadmap.py` | Авто-секции: ⚡ Quick wins (S effort) · 📅 Sprint plan (M effort) · 🎯 Quarter goals (L+) · effort budget в engineer-hours. |
 | **Multi-project compare** | `run.sh compare` | Severity/category matrix, common subcategories, unique findings, worst offenders ranking. |
-| **Phase 10a v5 enforcement** | `validate_phase.sh` | Required sections: Strong findings, Severity calibration, Systematic risks. Fail если high>50% без calibration justification. |
+| **Phase 10a enforcement** | `validate_phase.sh` | Required sections: Strong findings, Severity calibration, Systematic risks. Fail если high>50% без calibration justification. |
 
 ---
 
@@ -189,8 +186,8 @@ database-audit/results/ — все артефакты
 4. ✅ `location.lines` непустой для high
 5. ✅ Required evidence файлы присутствуют
 6. ✅ Stop-words отсутствуют («допустимо», «приемлемо» — запрещены)
-7. ✅ **v5.1: Phase 11 sections не содержат `_agent fills_` placeholders**
-8. ✅ **v5.1: Phase 10a `_adversary_review.md` > 500 байт + не template**
+7. ✅ **Phase 11 sections не содержат `_agent fills_` placeholders**
+8. ✅ **Phase 10a `_adversary_review.md` > 500 байт + не template**
 
 `finalize.sh` блокирует завершение если хоть один gate не прошёл.
 
@@ -212,7 +209,6 @@ project/
     ├── REFERENCE_MCP_TOOLS.md         ← Serena+GitNexus cookbook (7 cypher queries)
     ├── TEMPLATES.md
     ├── TOOLS_VERSIONS.md              ← зависимости + CVE awareness
-    ├── CHANGELOG.md
     │
     ├── init.sh                        ← STAGE 0 + --refresh
     ├── run.sh                         ← STAGE 1..N + reset
@@ -224,8 +220,8 @@ project/
     ├── prompts/                       ← chunked discovery (10 files)
     │   ├── 00_discover.md             ← orchestrator
     │   ├── 00a..00e_discover_*.md     ← deep по теме
-    │   ├── 00f_discover_serena_deep.md     ← v5 — Serena LSP
-    │   ├── 00g_discover_gitnexus_graph.md  ← v5 — GitNexus cypher
+    │   ├── 00f_discover_serena_deep.md     ← Serena LSP
+    │   ├── 00g_discover_gitnexus_graph.md  ← GitNexus cypher
     │   ├── 00z_validate_manifest.md        ← self-validation
     │   └── refresh.md                       ← --refresh mode
     │
@@ -248,8 +244,8 @@ project/
     │   ├── find_n_plus_one.py         ← confidence ranking
     │   ├── find_select_star.py
     │   ├── find_string_concat_sql.py
-    │   ├── find_raw_sql_unsafe.py     ← v5 — $queryRawUnsafe SQLi
-    │   ├── find_orm_wrappers.py       ← v5 — dbExec/dbQuery surface
+    │   ├── find_raw_sql_unsafe.py     ← $queryRawUnsafe SQLi
+    │   ├── find_orm_wrappers.py       ← dbExec/dbQuery surface
     │   │
     │   ├── find_isolation_levels.py
     │   ├── find_dangerous_ddl.py
@@ -257,7 +253,7 @@ project/
     │   ├── find_reversibility.py
     │   │
     │   ├── find_pii_in_logs.py
-    │   ├── find_pii_extended.py       ← v5 — passwords/tokens/payment-card
+    │   ├── find_pii_extended.py       ← passwords/tokens/payment-card
     │   ├── find_secrets_in_repo.py
     │   │
     │   ├── find_pool_settings.py
@@ -270,13 +266,13 @@ project/
     │   ├── find_status_without_check.py
     │   │
     │   ├── synthesize_roadmap.py      ← auto-TL;DR + categorical map
-    │   ├── adversary_review.py        ← v5 — auto-draft + bias check
-    │   └── deep_dive.py               ← v5 — GitNexus auto-fill trace+blast
+    │   ├── adversary_review.py        ← auto-draft + bias check
+    │   └── deep_dive.py               ← GitNexus auto-fill trace+blast
     │
     ├── validators/
     │   ├── validate_manifest.py       ← strict mode + sanity thresholds
     │   ├── preflight.py               ← live mode + read-only role check
-    │   ├── validate_phase.sh          ← v5 enforcement (no skeleton)
+    │   ├── validate_phase.sh          ← enforcement (no skeleton)
     │   ├── validate_confidence.py
     │   ├── check_evidence_citations.py
     │   ├── generate_meta_json.py
@@ -514,7 +510,7 @@ By category:
   DB-PERF:    1
 
 Highlights:
-  - 27 SQLi findings (главный фикс v3 → v4)
+  - 27 SQLi findings
   - 70 $queryRawUnsafe hits в 27 файлах
   - 249 ORM wrapper definitions (dbExec/dbQuery surface)
   - 156 N+1 candidates с confidence ranking

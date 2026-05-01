@@ -1,6 +1,6 @@
 <div align="center">
 
-  <h1>🔒 CI Hardening Pipeline <code>v2</code></h1>
+  <h1>🔒 CI Hardening Pipeline</h1>
 
   <p>
     <b>Autonomous CI/CD security audit для любого GitHub-проекта.</b><br/>
@@ -8,7 +8,6 @@
   </p>
 
   <p>
-    <img src="https://img.shields.io/badge/version-v2-orange" alt="v2"/>
     <img src="https://img.shields.io/badge/architecture-manifest--driven-blue" alt="Manifest-driven"/>
     <img src="https://img.shields.io/badge/detectors-16-green" alt="16 detectors"/>
     <img src="https://img.shields.io/badge/integration-gh_API-purple" alt="GitHub API"/>
@@ -27,7 +26,7 @@
 
 <br/>
 
-> **v2 — autonomous pipeline.** Один промт, путь к проекту — ИИ сам обходит все workflows, читает gh API (branch protection, security features), ищет supply-chain риски, генерирует готовые `.github/` файлы для PR. Унаследовал паттерны database-audit v5.2 (manifest-driven, chunked discovery, hard exit gates, auto-fill phase deep_dive).
+> **Autonomous pipeline.** Один промт, путь к проекту — ИИ сам обходит все workflows, читает gh API (branch protection, security features), ищет supply-chain риски, генерирует готовые `.github/` файлы для PR. Архитектура: manifest-driven, chunked discovery, hard exit gates, auto-fill phase deep_dive.
 
 ---
 
@@ -100,7 +99,7 @@ project/
 └── ci-hardening/                              ← всё внутри одной папки
     │
     │── pipeline (committed) ─────────────────
-    ├── README.md, CHANGELOG.md, MASTER_PROMPT.md
+    ├── README.md, MASTER_PROMPT.md
     ├── init.sh, run.sh, requirements.txt
     ├── manifest.schema.yml, manifest.example.yml
     │
@@ -112,7 +111,7 @@ project/
     │   ├── 00d_discover_branch_protection.md
     │   ├── 00e_discover_settings.md
     │   ├── 00z_validate_manifest.md
-    │   ├── 00_legacy_audit_prompt.md          ← v1 prompt (для обратной совместимости)
+    │   ├── 00_full_audit_prompt.md            ← полный single-prompt вариант
     │   └── refresh.md
     │
     ├── detectors/                             ← 16 detectors

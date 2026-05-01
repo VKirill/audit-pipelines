@@ -1,6 +1,6 @@
 <div align="center">
 
-  <h1>🛡️ Codebase Audit Pipeline <code>v3</code></h1>
+  <h1>🛡️ Codebase Audit Pipeline</h1>
 
   <p>
     <b>Универсальный аудит любой кодовой базы — Python, Go, TypeScript, Java, Rust.</b><br/>
@@ -8,7 +8,6 @@
   </p>
 
   <p>
-    <img src="https://img.shields.io/badge/version-v3-orange" alt="v3"/>
     <img src="https://img.shields.io/badge/phases-13%2B-blue" alt="13+ phases"/>
     <img src="https://img.shields.io/badge/time-45--180_min-green" alt="45-180 min"/>
     <img src="https://img.shields.io/badge/mode-read--only-success" alt="Read-only"/>
@@ -30,17 +29,17 @@
 > - Нужен **глубокий аудит** с пруфами, а не «общие наблюдения»
 > - Проект работает с **деньгами / транзакциями / критичными данными** — нужны отдельные проверки на инварианты
 > - Хочешь интегрировать аудит в CI и видеть pass/fail по объективным метрикам
-> - Уже делал классический аудит, но хочется проверить «а нет ли overconfidence в том отчёте» (v3 проверяет себя сам)
+> - Уже делал классический аудит, но хочется проверить «а нет ли overconfidence в том отчёте» — пайплайн проверяет себя сам
 
 Если у тебя **React/Next.js сайт** — возможно, тебе подойдёт более лёгкий [frontend-пайплайн](../frontend).
 
 ---
 
-## Чем v3 отличается от обычного LLM-аудита
+## Чем отличается от обычного LLM-аудита
 
 > **Обычная проблема LLM-аудита:** агент пишет красиво, но половина находок — выдуманы. Цитата из кода может не существовать. «Confidence: high» ставится по настроению. Critical-уязвимости проходят через «можно считать».
 
-**v3 ловит это автоматически:**
+**Этот пайплайн ловит это автоматически:**
 
 <table>
 <thead>
@@ -111,7 +110,7 @@ flowchart LR
 | **10a Self-Audit** ⭐ | Adversary review, premortem, ресэмпл 3 high-findings |
 | **11 Deep-Dive** | Forensic-grade анализ. Обязательна при ≥ 1 critical |
 
-⭐ — фазы, добавленные в v3.
+⭐ — самодиагностика и forensic-фазы.
 
 </details>
 
@@ -138,7 +137,7 @@ gitnexus setup
 claude mcp list   # должны быть serena и gitnexus
 ```
 
-**Опциональное (для v3 валидации/сбора):**
+**Опциональное (для валидации/сбора):**
 
 ```bash
 sudo apt install jq cloc        # обычно уже есть
@@ -167,7 +166,7 @@ gitnexus analyze --embeddings
 **Шаг 3.** Запусти Claude Code и в чат вставь:
 
 ```
-Прочитай codebase/01_ORCHESTRATOR.md и выполни весь пайплайн v3 строго по инструкции.
+Прочитай codebase/01_ORCHESTRATOR.md и выполни весь пайплайн строго по инструкции.
 После каждой фазы запускай bash codebase/scripts/validate_phase.sh NN — если падает,
 исправляй и не двигайся дальше. Phase 10a (self-audit) обязательна. Phase 11 (deep-dive)
 обязательна при наличии critical findings. Финал — bash codebase/scripts/finalize.sh,
@@ -246,8 +245,7 @@ codebase/
 ├── 00_START_HERE.md              ← начни отсюда (для агента и человека)
 ├── 01_ORCHESTRATOR.md            ← главный диспетчер пайплайна
 ├── REFERENCE_TOOLS.md            ← справочник Serena + GitNexus
-├── TEMPLATES.md                  ← форматы findings (поля v3)
-├── CHANGELOG.md                  ← история изменений v1 → v2 → v3
+├── TEMPLATES.md                  ← форматы findings
 ├── scripts/                      ← детерминированные валидаторы
 │   ├── validate_phase.sh
 │   ├── validate_confidence.py
@@ -329,16 +327,6 @@ codebase/
 | Агент предлагает изменить код | Отказывайся, `read-only` зашит в `§3.1` |
 
 </details>
-
----
-
-## История версий
-
-См. [CHANGELOG.md](./CHANGELOG.md) для полной истории.
-
-> **v1** → базовый чек-лист, агент мог пропускать фазы
-> **v2** → добавлены квоты, evidence, калибровка confidence. Но агент мог обойти фразой «допустимо»
-> **v3** → правила превращены в **исполнимые скрипты**. Self-audit. Adversary review. Money invariants. Trust map.
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Цель:** Поймать обход правил самим агентом. Между Phase 10 (синтез ROADMAP) и `finalize.sh` агент обязан **явно проверить свою же работу**: распределение confidence, реальность цитат, состоятельность критичных findings, ситуация «может я договорился сам с собой».
 
-Эта фаза — главная гарантия v3 против сценария «отчёт выглядит хорошо, но half findings — выдуманные / overconfident».
+Эта фаза — главная защита пайплайна против сценария «отчёт выглядит хорошо, но half findings — выдуманные / overconfident».
 
 **Когда запускать:** ровно после `phase_10_synthesis_roadmap.md`. Перед `phase_11_deep_dive.md` (если требуется) и `finalize.sh`.
 
@@ -147,7 +147,7 @@ rg -nE "\\b(допустимо|приемлемо|можно считать|до
 - [ ] `audit/_adversary_review.md` ≥ 10 пунктов.
 - [ ] `audit/_known_unknowns.md` ≥ 3 строки в таблице.
 - [ ] Все три случайных high-finding'а перепроверены и помечены keep/update/downgrade.
-- [ ] `validate_confidence.py` exit 0 (или зафиксировано в отчёте, что violations осознанные с обоснованием — но v3 ставит planку: финал требует exit 0).
+- [ ] `validate_confidence.py` exit 0 (или зафиксировано в отчёте, что violations осознанные с обоснованием — но финал требует exit 0).
 - [ ] `check_evidence_citations.py` без ERRORS.
 - [ ] Запусти `bash audit_pipeline/scripts/validate_phase.sh 10a`.
 

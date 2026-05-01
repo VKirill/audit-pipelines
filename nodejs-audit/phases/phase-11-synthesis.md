@@ -66,8 +66,6 @@
 
 **Проект:** <name>
 **Дата:** <ISO>
-**Версия пайплайна:** chained-v2
-
 ---
 
 ## Executive Summary
@@ -148,7 +146,7 @@
 
 ---
 
-*Отчёт создан автономно через `nodejs-audit/MASTER_PROMPT.md` (chained-v2).
+*Отчёт создан автономно через `nodejs-audit/MASTER_PROMPT.md`.
 Для повторного аудита через 3 месяца — запусти ту же команду.*
 ```
 
@@ -156,7 +154,7 @@
 
 ```json
 {
-  "version": "chained-v2",
+  "generator": "nodejs-audit",
   "generated_at": "<ISO-8601 timestamp>",
   "project": {
     "name": "<из package.json>",

@@ -117,7 +117,7 @@ Next phase: phase_01_inventory.md
 
 Обнови `.serena/memories/audit_progress` по шаблону из `TEMPLATES.md §4`.
 
-## 5a. v3 — запуск deterministic data collectors (один раз, в начале)
+## 5a. Запуск deterministic data collectors (один раз, в начале)
 
 Запусти оркестратор внешних инструментов — он соберёт cloc/git stats/npm audit/gitleaks/coverage в `audit/evidence/` так, чтобы дальше эти данные были готовы:
 
@@ -127,7 +127,7 @@ bash audit_pipeline/scripts/run_external_tools.sh
 
 Скрипт никогда не падает: если инструмент отсутствует — он создаст placeholder-файл с инструкцией по установке. Время — 1-10 минут зависит от размера проекта.
 
-## 5b. v3 — exit gate
+## 5b. Exit gate
 
 ```bash
 bash audit_pipeline/scripts/validate_phase.sh 00

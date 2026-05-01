@@ -1,6 +1,6 @@
 # REFERENCE — MCP tools deep dive (Serena + GitNexus)
 
-> **v4 — 100% использование Serena + GitNexus.** Каждый шаг discover/детектор инструктирует ИИ-агента использовать конкретный MCP-tool. Bash/rg остаётся как fallback.
+> **100% использование Serena + GitNexus.** Каждый шаг discover/детектор инструктирует ИИ-агента использовать конкретный MCP-tool. Bash/rg остаётся как fallback.
 
 ---
 

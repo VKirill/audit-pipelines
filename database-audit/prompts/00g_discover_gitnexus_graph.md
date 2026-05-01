@@ -216,9 +216,9 @@ Phase 11 deep_dive имеет 6 секций. GitNexus auto-fill секции:
 
 ---
 
-## 🔴 v5 — Route map PII exposure verification
+## 🔴 Route map PII exposure verification
 
-> Этот шаг был в v4, но не enforced. v5 делает обязательным.
+> Обязательный шаг: связь HTTP endpoint'ов с PII-колонками не должна остаться неявной.
 
 ### Шаги
 
@@ -269,4 +269,4 @@ RETURN COUNT(audit) > 0 AS has_audit
 evidence/_serena_gitnexus/pii_exposure_map.json
 ```
 
-Это закрывает blind spot v4 — там были PII findings, но не было их **связи** с конкретными API endpoints.
+Это закрывает blind spot — без этого шага PII findings есть, но **связи** с конкретными API endpoints у них нет.

@@ -134,7 +134,7 @@ bash database-audit/scripts/validate_phase.sh 01
 
 ---
 
-## v2: Manifest workflow
+## Manifest workflow
 
 **Какие manifest-секции читает эта фаза:** `stack`, `paths.schema_files`, `paths.migration_files`, `paths.query_files`
 

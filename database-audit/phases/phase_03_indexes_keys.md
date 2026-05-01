@@ -125,7 +125,7 @@ Required evidence:
 
 ---
 
-## v2: Manifest workflow
+## Manifest workflow
 
 **Какие manifest-секции читает эта фаза:** `hints.missing_fk_indexes`, evidence/01/schema_summary.json
 

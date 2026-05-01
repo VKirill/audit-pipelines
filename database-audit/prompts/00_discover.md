@@ -1,6 +1,6 @@
 # 00 — Discover (orchestrator)
 
-> **v3 — chunked discovery.** Этот файл — оркестратор. Глубокая работа по специальным темам — в sub-prompts (`00a..00e`). На больших проектах загружай sub-prompts по необходимости, не пытайся всё в одном context-окне.
+> **Chunked discovery.** Этот файл — оркестратор. Глубокая работа по специальным темам — в sub-prompts (`00a..00e`). На больших проектах загружай sub-prompts по необходимости, не пытайся всё в одном context-окне.
 
 ---
 
@@ -177,7 +177,7 @@ hints:
 
 ---
 
-## Шаг 6 — Modern 2026 patterns (новое в v3)
+## Шаг 6 — Modern 2026 patterns
 
 ### 6.1. Vector DB indexes (AI/ML проекты)
 

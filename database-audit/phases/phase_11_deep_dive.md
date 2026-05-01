@@ -119,7 +119,7 @@ bash database-audit/scripts/validate_phase.sh 11
 
 ---
 
-## v2: Manifest workflow
+## Manifest workflow
 
 **Какие manifest-секции читает эта фаза:** findings.jsonl где severity=critical
 

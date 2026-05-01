@@ -64,7 +64,7 @@
 <tr>
 <td width="50%" valign="top">
 
-### ⚡ [`nodejs-audit/`](./nodejs-audit) `chained-v2`
+### ⚡ [`nodejs-audit/`](./nodejs-audit)
 
 **Архитектурный аудит JS/TS с подготовкой к продакшену**
 
@@ -160,7 +160,7 @@ PROJECT_PATH=/your/project
 
 **Глубокий аудит БД, single-command автономный**
 
-14 фаз · 30 детекторов · 11 ORM · Serena+GitNexus · **v5.2**
+14 фаз · 30 детекторов · 11 ORM · Serena+GitNexus
 
 ```
 PROJECT_PATH=/your/project
@@ -224,7 +224,7 @@ flowchart TD
 
 ## Что получишь на выходе
 
-Главный артефакт всех пяти пайплайнов — **ROADMAP**. У `nodejs-audit` (chained-v2) дополнительно — `_meta.json` для CI, `QUICK-WINS.md` с атомарными коммитами на неделю, `ADR-DRAFTS/` с черновиками архитектурных решений и `REFACTORING/` с file-level таргетами и fitness functions. У `ci-hardening` — готовый `ci.yml`. У `database-audit` — машинная сводка `_meta.json` и `_known_unknowns.md` (что осталось проверить). Это не «80 страниц красивых слов», а конкретный список:
+Главный артефакт всех пяти пайплайнов — **ROADMAP**. У `nodejs-audit` дополнительно — `_meta.json` для CI, `QUICK-WINS.md` с атомарными коммитами на неделю, `ADR-DRAFTS/` с черновиками архитектурных решений и `REFACTORING/` с file-level таргетами и fitness functions. У `ci-hardening` — готовый `ci.yml`. У `database-audit` — машинная сводка `_meta.json` и `_known_unknowns.md` (что осталось проверить). Это не «80 страниц красивых слов», а конкретный список:
 
 ```
 🔴 Сейчас (Now):

@@ -132,7 +132,7 @@ bash database-audit/scripts/validate_phase.sh 00
 
 ---
 
-## v2: Manifest workflow
+## Manifest workflow
 
 **Какие manifest-секции читает эта фаза:** (нет — этап делает init.sh)
 

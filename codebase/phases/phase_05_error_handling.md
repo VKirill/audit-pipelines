@@ -1,4 +1,4 @@
-# PHASE 05 — ERROR HANDLING & RESILIENCE (v2)
+# PHASE 05 — ERROR HANDLING & RESILIENCE
 
 **Цель:** Как код ведёт себя, когда что-то идёт не так. Не проявятся ли отказы в production.
 

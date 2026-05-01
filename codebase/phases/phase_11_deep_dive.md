@@ -2,7 +2,7 @@
 
 **Цель:** Forensic-grade анализ выбранных критичных зон. Превратить "first-pass risk scan" в "готовый без оговорок" аудит для зон, которые того стоят.
 
-**Когда запускать (v3 правило):**
+**Когда запускать:**
 
 | Сценарий | Phase 11 |
 |----------|----------|
@@ -10,7 +10,7 @@
 | Только high/medium findings | **Опционально**. Агент предлагает 4–6 кандидатов, пользователь выбирает 2–4. |
 | Mostly low/info | Можно пропустить. |
 
-В v2 фаза была опциональной всегда. В v3 при наличии critical — это hard requirement, потому что critical-finding должен быть подтверждён forensic-grade перед тем, как ROADMAP направит команду на «срочную ротацию» / «срочный hotfix».
+При наличии critical — это hard requirement, потому что critical-finding должен быть подтверждён forensic-grade перед тем, как ROADMAP направит команду на «срочную ротацию» / «срочный hotfix».
 
 **Источники:**
 - Feathers, *Working Effectively with Legacy Code* — characterization tests, seam points.

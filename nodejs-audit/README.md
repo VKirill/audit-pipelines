@@ -1,6 +1,6 @@
 <div align="center">
 
-  <h1>⚡ Node.js Audit Pipeline <code>chained-v2</code></h1>
+  <h1>⚡ Node.js Audit Pipeline</h1>
 
   <p>
     <b>Автономный архитектурный аудит JS/TS проекта за один прогон Claude Code.</b><br/>
@@ -8,7 +8,6 @@
   </p>
 
   <p>
-    <img src="https://img.shields.io/badge/version-chained--v2-orange" alt="chained-v2"/>
     <img src="https://img.shields.io/badge/stack-JS%20%2F%20TS%20%2F%20Node-339933?logo=node.js&logoColor=white" alt="JS/TS/Node"/>
     <img src="https://img.shields.io/badge/phases-13-blue" alt="13 phases"/>
     <img src="https://img.shields.io/badge/MCP-first-purple" alt="MCP-first"/>
@@ -33,21 +32,17 @@
 
 ---
 
-## Чем `chained-v2` отличается от `autonomous-v1`
+## Что внутри
 
-| Аспект | v1 (старая) | chained-v2 (текущая) |
-|---|---|---|
-| Структура | Один большой `AUDIT.md` (40 KB) | 13 phase-файлов в `phases/`, каждый self-contained |
-| Знания о коде | grep + npx-tools | **MCP-first**: gitnexus графы, serena LSP, pipeline-память — fallback на grep |
-| Hot-spots | нет | **Phase 04** — `churn × fan-in` (Tornhill) |
-| Архитектура | 6 абстрактных «осей» | **DDD-словарь** (anemic/rich, aggregates, ACL) + Clean Architecture + 6 осей |
-| Security | OWASP Top 10 «в общем» | **OWASP Top 10 + ASVS L1-L2** чек-лист |
-| Книги | без атрибуции | **15 книг** с главами (REFERENCES.md), каждый finding ссылается |
-| Финальный отчёт | один markdown | **5 артефактов**: FINAL-REPORT, _meta.json, QUICK-WINS, ROADMAP, ADR-DRAFTS, REFACTORING |
-| Trade-off matrix | нет | **Richards & Ford 10 ilities** (current → target) |
-| Fitness functions | нет | в каждом ADR-DRAFT и REFACTORING-target — CI-test |
-| Cytometric criteria | нет | у каждого refactor — «before metric → after metric» |
-| Совместимость | autonomous-v1 в `_meta.json` | `version: "chained-v2"` в `_meta.json` |
+- **13 phase-файлов в `phases/`** — каждый self-contained, объявляет свои inputs/outputs.
+- **MCP-first probe** в начале — gitnexus графы, serena LSP, pipeline-память; fallback на grep.
+- **Hot-spot матрица** — `churn × fan-in` для объективного выявления опасных файлов.
+- **DDD + Clean Architecture словарь** — anemic vs rich, aggregates, anti-corruption layer.
+- **OWASP Top 10 + ASVS L1-L2** как чек-лист для security-фазы.
+- **Аннотированная библиотека** в `REFERENCES.md` (15 книг с главами); каждый finding ссылается.
+- **Trade-off matrix Richards & Ford** — 10 ilities (current → target).
+- **Fitness functions + cytometric criteria** в каждом архитектурном решении и refactoring-таргете.
+- **5 артефактов на выходе:** `FINAL-REPORT.md` + `_meta.json` + `QUICK-WINS.md` + `ROADMAP.md` + `ADR-DRAFTS/` + `REFACTORING/`.
 
 ---
 
@@ -80,22 +75,20 @@ nodejs-audit/
 ├── AUDIT.md                        ← индекс
 ├── README.md                       ← этот файл
 ├── REFERENCES.md                   ← 15 книг + главы
-├── IMPROVEMENT_NOTES.md            ← заметки по апгрейду v1→v2
 ├── phases/                         ← 13 поэтапных файлов
 │   ├── phase-00-bootstrap.md
-│   ├── phase-01-mcp-probe.md       (NEW: gitnexus + serena + wiki RAG)
+│   ├── phase-01-mcp-probe.md        (gitnexus + serena + wiki RAG)
 │   ├── phase-02-recon.md
 │   ├── phase-03-deterministic.md
-│   ├── phase-04-hotspots.md        (NEW: churn × fan-in, Tornhill)
+│   ├── phase-04-hotspots.md         (churn × fan-in, Tornhill)
 │   ├── phase-05-architecture-ddd.md (DDD + Clean + 6 осей)
 │   ├── phase-06-readability.md
 │   ├── phase-07-security.md         (OWASP Top 10 + ASVS L1-L2)
 │   ├── phase-08-performance.md
 │   ├── phase-09-observability.md
 │   ├── phase-10-ai-readability.md
-│   ├── phase-11-synthesis.md        (+ Trade-off matrix Richards & Ford)
-│   ├── phase-12-prod-roadmap.md     (NEW: 4 артефакта)
-│   └── _deprecated/                 ← старая v1 для совместимости
+│   ├── phase-11-synthesis.md        (Trade-off matrix Richards & Ford)
+│   └── phase-12-prod-roadmap.md     (генерация 4 итоговых артефактов)
 ├── templates/
 │   ├── adr-draft.md                ← черновик архитектурного решения
 │   ├── refactoring-target.md       ← file-level таргет с fitness function
@@ -225,7 +218,7 @@ git checkout -b adr-021
 
 ---
 
-## Когда использовать chained-v2
+## Когда использовать
 
 > ✅ Перед стратегической работой над проектом (квартальный roadmap).
 > ✅ Когда проект готовят к продакшену.
@@ -234,15 +227,6 @@ git checkout -b adr-021
 
 > ❌ Если нужен **просто quick smoke-check** на 10 минут — используй меньшие пайплайны (frontend / codebase).
 > ❌ Для не-JS/TS проектов — этот пайплайн откажется работать.
-
----
-
-## Версии
-
-- **autonomous-v1** — старая, single `AUDIT.md`. Архивирована в `phases/_deprecated/`.
-- **chained-v2** — текущая, цепочка из 13 файлов + MCP-first + 4 артефакта.
-
-`_meta.json.version` поле даёт обратную совместимость для CI.
 
 ---
 

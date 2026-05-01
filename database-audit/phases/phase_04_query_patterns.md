@@ -152,7 +152,7 @@ Required evidence:
 
 ---
 
-## v2: Manifest workflow
+## Manifest workflow
 
 **Какие manifest-секции читает эта фаза:** `hints.n_plus_one_candidates`, `paths.query_files`
 

@@ -146,7 +146,7 @@ Required evidence:
 
 ---
 
-## v2: Manifest workflow
+## Manifest workflow
 
 **Какие manifest-секции читает эта фаза:** `hints.pool_settings`, `paths.pool_config_files`
 

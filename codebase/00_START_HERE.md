@@ -1,6 +1,6 @@
-# 00 — START HERE (v3)
+# 00 — START HERE
 
-**Это точка входа в аудит-пайплайн v3. Здесь две инструкции — одна для тебя (человека), одна для агента.**
+**Это точка входа в аудит-пайплайн. Здесь две инструкции — одна для тебя (человека), одна для агента.**
 
 ---
 
@@ -21,7 +21,7 @@
    gitnexus setup
    ```
 
-2. Опционально (но рекомендуется) — поставить инструменты для v3 валидации/сбора:
+2. Опционально (но рекомендуется) — поставить инструменты валидации/сбора:
    ```bash
    sudo apt install jq cloc        # уже обычно есть
    # gitleaks для secret-history scan
@@ -36,7 +36,7 @@
 5. Запустить `claude` и дать одну команду:
 
    ```
-   Прочитай audit_pipeline/01_ORCHESTRATOR.md и выполни весь пайплайн v3 строго по инструкции.
+   Прочитай audit_pipeline/01_ORCHESTRATOR.md и выполни весь пайплайн строго по инструкции.
    Все артефакты — в папку audit/. Режим работы — read-only.
    После каждой фазы запускай bash audit_pipeline/scripts/validate_phase.sh NN —
    если падает, исправляй и не переходи дальше. После phase_10_synthesis_roadmap
@@ -45,7 +45,7 @@
    После каждой фазы сообщай 1-2 предложения статуса. Финал — tl;dr на 5-7 пунктов.
    ```
 
-6. Ждать. На проекте ~50k LOC v3 занимает 90-180 минут (строже v2).
+6. Ждать. На проекте ~50k LOC аудит занимает 90–180 минут.
 
 7. Читать `audit/ROADMAP.md` — главный результат. И `audit/_meta.json` для машинной сводки.
 
@@ -59,9 +59,9 @@
 
 **Твои следующие действия:**
 
-1. Прочитай `audit_pipeline/01_ORCHESTRATOR.md` целиком. **Особое внимание — §3.3 (калибровка confidence), §3.4 (запрет «допустимо»), §3.10 (anti-recursion), §4 (exit gates), §7 (fallback-протоколы).** Главные отличия v3.
+1. Прочитай `audit_pipeline/01_ORCHESTRATOR.md` целиком. **Особое внимание — §3.3 (калибровка confidence), §3.4 (запрет «допустимо»), §3.10 (anti-recursion), §4 (exit gates), §7 (fallback-протоколы).**
 2. Прочитай `audit_pipeline/REFERENCE_TOOLS.md` — справочник.
-3. Прочитай `audit_pipeline/TEMPLATES.md` — формат findings (внимание на новые поля `confidence_rationale` и `exploit_proof`).
+3. Прочитай `audit_pipeline/TEMPLATES.md` — формат findings (внимание на поля `confidence_rationale` и `exploit_proof`).
 4. Запусти один раз: `bash audit_pipeline/scripts/run_external_tools.sh` (соберёт cloc/git/npm-audit/gitleaks/coverage в `audit/evidence/`).
 5. Начни с `audit_pipeline/phases/phase_00_setup.md`.
 6. После КАЖДОЙ фазы:
@@ -83,20 +83,3 @@
 - **fallback protocols** (§7) — деградация инструмента ≠ деградация анализа
 
 Не торопись. Лучше медленно и точно, чем быстро и поверхностно.
-
----
-
-## Что изменилось в v3 относительно v2
-
-См. `CHANGELOG.md`. Кратко:
-
-1. **Детерминированные валидаторы** в `scripts/` превращают exit gates из «совета» в hard fail.
-2. **Обязательные поля** `confidence_rationale` (для high) и `exploit_proof` (для critical).
-3. **Новые мини-фазы:** 02b (Trust Map), 06b (Money & State Invariants), 10a (Self-Audit с adversary review).
-4. **Phase 11 deep-dive обязательна** при ≥ 1 critical finding.
-5. **`scripts/run_external_tools.sh`** собирает gitleaks / npm audit / coverage / cloc заранее — не «не успел».
-6. **`scripts/finalize.sh`** — единый финальный gate.
-7. **`audit/_meta.json`** — машинная сводка для CI/dashboards.
-8. **`audit/_known_unknowns.md` + `audit/_adversary_review.md`** — обязательные финальные артефакты.
-9. **Anti-recursion на инструментах** — 3 пустых ответа = переход на fallback.
-10. **Запрещённые слова** в отчётах ловятся через `validate_phase.sh` / stop-words audit.

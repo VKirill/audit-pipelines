@@ -1,4 +1,4 @@
-# 01 — ORCHESTRATOR (v3)
+# 01 — ORCHESTRATOR
 
 **Это главный диспетчер пайплайна для STAGE 1..N (выполнение фаз).**
 
@@ -6,7 +6,7 @@
 
 ---
 
-## 1. Архитектура v3
+## 1. Архитектура
 
 ```
 phase_00_setup                    → manifest+evidence sanity (фаза в основном уже сделана init.sh)

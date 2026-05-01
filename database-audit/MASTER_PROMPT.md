@@ -72,7 +72,7 @@ fi
 python3 -c "import yaml, jsonschema" || pip install -r database-audit/requirements.txt
 ```
 
-### Stage 0.5 — DSN/mode auto-detection (новое в v5.1)
+### Stage 0.5 — DSN/mode auto-detection
 
 > **Цель:** определить может ли быть запущен `live mode` без интерактивности от пользователя.
 
@@ -177,7 +177,7 @@ bash database-audit/init.sh
 
 ### Stage 1 — GitNexus indexing (auto, 1-5 минут)
 
-**Это критический шаг для phase 11 deep_dive auto-fill.** В v4 (предыдущая итерация) этот шаг был пропущен → secs 1/3 пусты.
+**Это критический шаг для phase 11 deep_dive auto-fill.** Без него секции trace и blast radius будут пустыми.
 
 ```bash
 PROJECT_NAME=$(basename "$PROJECT_PATH")
@@ -213,7 +213,7 @@ fi
 9. database-audit/prompts/00z_validate_manifest.md        — self-validation gate
 ```
 
-**Особое внимание (новое в v5.1):**
+**Особое внимание:**
 
 #### 2a. Live drift verification (если `mode: live`)
 
@@ -487,15 +487,6 @@ bash database-audit/validators/finalize.sh
 | Report | один итоговый message |
 
 **Не стоп без причины. Не задавай вопросов кроме критичных блокеров.**
-
----
-
-## Версионирование
-
-Этот промт = `v5.1` мастер-промта.
-Pipeline = `database-audit v5.1` (manifest schema, detectors, validators).
-
-Совместимость: master prompt v5.1 работает с pipeline v5.1+ (требует `gitnexus analyze` step и расширенные prompts/00f, 00g).
 
 ---
 

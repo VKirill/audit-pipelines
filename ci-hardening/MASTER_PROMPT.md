@@ -283,9 +283,3 @@ bash ci-hardening/validators/finalize.sh
 - Reduce script-injection coverage до базового regex
 - Помечай в `_known_unknowns.md`
 
----
-
-## Версионирование
-
-Master prompt = `v1` для ci-hardening (унаследовал паттерны database-audit v5.2).
-Pipeline = `ci-hardening v2` (manifest-driven, autonomous).

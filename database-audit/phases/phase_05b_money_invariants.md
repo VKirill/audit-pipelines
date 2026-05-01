@@ -129,7 +129,7 @@ Required evidence:
 
 ---
 
-## v2: Manifest workflow
+## Manifest workflow
 
 **Какие manifest-секции читает эта фаза:** `hints.money_columns` (для money_floats), `hints.money_endpoints` (для no_idempotency)
 
