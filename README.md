@@ -64,11 +64,11 @@
 <tr>
 <td width="50%" valign="top">
 
-### ⚡ [`nodejs-audit/`](./nodejs-audit)
+### ⚡ [`nodejs-audit/`](./nodejs-audit) `chained-v2`
 
-**Быстрый аудит JS/TS — точка входа**
+**Архитектурный аудит JS/TS с подготовкой к продакшену**
 
-10 фаз · 30–90 мин · **single-arg autonomous mode**.
+13 фаз · MCP-first · **single-arg autonomous mode**.
 
 ```
 PROJECT_PATH=/your/project
@@ -77,16 +77,17 @@ PROJECT_PATH=/your/project
 Это весь required input. ИИ сам:
 
 - **Pipeline install** — копирует `nodejs-audit/` в проект
-- **Auto-detect** — `npm/yarn/pnpm/bun`, TS/JS, размер
-- **Sanity check** — корректно останавливается если не JS/TS
-- **10 фаз через `npx --yes`** — без установки в `package.json`
-- **Без MCP** — никаких Serena/GitNexus, чистый bash+grep
-- **`FINAL-REPORT.md` + `_meta.json`** для CI (verdict pass/warn/fail)
-- **Готовые промты** для фиксов в финальном отчёте
+- **Auto-detect** — `npm/yarn/pnpm/bun`, TS/JS, монорепо
+- **MCP-first probe** — gitnexus / serena / pipeline-память (fallback на grep)
+- **Hot-spot матрица** — `churn × fan-in` (Tornhill *Crime Scene*)
+- **DDD + Clean Architecture** — anemic vs rich, ACL, aggregates
+- **OWASP Top 10 + ASVS L1-L2** чек-лист
+- **Trade-off matrix** — Richards & Ford 10 ilities (current → target)
+- **5 артефактов на выходе:** `FINAL-REPORT.md` + `_meta.json` + `QUICK-WINS.md` + `ROADMAP.md` + `ADR-DRAFTS/` + `REFACTORING/` (file-level таргеты с fitness functions)
 
-**Для:** любого JS/TS проекта (Node-бэкенд, React/Next-фронт, монорепо, бот, CLI). Когда нужен быстрый первый проход без возни с MCP.
+**Для:** любого JS/TS проекта (Node-бэкенд, React/Next/Nuxt/Vue, монорепо, бот, CLI). Когда нужен не только linting, но и **архитектурный взгляд** + roadmap подготовки к продакшену.
 
-[Запустить →](./nodejs-audit) · [📋 MASTER_PROMPT](./nodejs-audit/MASTER_PROMPT.md)
+[Запустить →](./nodejs-audit) · [📋 MASTER_PROMPT](./nodejs-audit/MASTER_PROMPT.md) · [📚 REFERENCES (15 книг)](./nodejs-audit/REFERENCES.md)
 
 </td>
 <td width="50%" valign="top">
@@ -200,7 +201,7 @@ flowchart TD
     Z -- «CI красный или его нет,<br/>боюсь supply-chain» --> H[ci-hardening/]
     Z -- «Тормозит, теряет данные,<br/>боюсь миграций» --> DB[database-audit/]
     Z -- «Хочу понять что в коде» --> Q{JS/TS проект?<br/>Нужен быстрый<br/>первый проход?}
-    Q -- Да, без MCP, paste-and-run --> N[nodejs-audit/]
+    Q -- Да, архитектурный аудит<br/>с MCP + roadmap к продакшену --> N[nodejs-audit/]
     Q -- Нужен глубокий аудит --> B{Это React или<br/>Next.js сайт?}
     B -- Да, чистый фронт --> C[frontend/]
     B -- Есть бэкенд / API --> D[codebase/]
@@ -223,7 +224,7 @@ flowchart TD
 
 ## Что получишь на выходе
 
-Главный артефакт всех пяти пайплайнов — **ROADMAP**. У `nodejs-audit` дополнительно — `_meta.json` для CI. У `ci-hardening` — готовый `ci.yml`. У `database-audit` — машинная сводка `_meta.json` и `_known_unknowns.md` (что осталось проверить). Это не «80 страниц красивых слов», а конкретный список:
+Главный артефакт всех пяти пайплайнов — **ROADMAP**. У `nodejs-audit` (chained-v2) дополнительно — `_meta.json` для CI, `QUICK-WINS.md` с атомарными коммитами на неделю, `ADR-DRAFTS/` с черновиками архитектурных решений и `REFACTORING/` с file-level таргетами и fitness functions. У `ci-hardening` — готовый `ci.yml`. У `database-audit` — машинная сводка `_meta.json` и `_known_unknowns.md` (что осталось проверить). Это не «80 страниц красивых слов», а конкретный список:
 
 ```
 🔴 Сейчас (Now):
